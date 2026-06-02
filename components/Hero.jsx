@@ -32,10 +32,10 @@ export default function Hero() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
-              href="#categories"
+              href="/select-room"
               className="inline-flex items-center justify-center rounded-full bg-brand-700 px-8 py-3.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-brand-800"
             >
-              Shop by room
+              Start Designing
             </Link>
             <Link
               href="#styles"

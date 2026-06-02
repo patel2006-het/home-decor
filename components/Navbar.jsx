@@ -45,12 +45,12 @@ export default function Navbar() {
           >
             Sign in
           </a>
-          <a
-            href="#categories"
+          <Link
+            href="/select-room"
             className="rounded-full bg-brand-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-800"
           >
-            Explore
-          </a>
+            Start Designing
+          </Link>
         </div>
 
         <button
@@ -111,13 +111,13 @@ export default function Navbar() {
             >
               Sign in
             </a>
-            <a
-              href="#categories"
+            <Link
+              href="/select-room"
               className="rounded-full bg-brand-700 px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-brand-800"
               onClick={() => setMenuOpen(false)}
             >
-              Explore
-            </a>
+              Start Designing
+            </Link>
           </li>
         </ul>
       </div>

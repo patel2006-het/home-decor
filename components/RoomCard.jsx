@@ -1,5 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useDesign } from "@/context/DesignContext";
 
 /**
  * RoomCard — reusable card for the room selection page.
@@ -8,6 +12,14 @@ import Link from "next/link";
  */
 export default function RoomCard({ room }) {
   const { slug, name, description, image, accent } = room;
+  const router = useRouter();
+  const { setSelectedRoom } = useDesign();
+
+  const handleSelectRoom = (e) => {
+    e.preventDefault();
+    setSelectedRoom(room);
+    router.push("/select-style");
+  };
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-stone-200/60">
@@ -60,7 +72,8 @@ export default function RoomCard({ room }) {
 
         {/* Select Room CTA */}
         <Link
-          href={`/select-style?room=${slug}`}
+          href="/select-style"
+          onClick={handleSelectRoom}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-brand-800 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"
           aria-label={`Select ${name} — choose your style`}
         >

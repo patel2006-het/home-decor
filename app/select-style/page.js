@@ -1,14 +1,13 @@
+"use client";
+
+import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Breadcrumb from "@/components/Breadcrumb";
 import StyleCard from "@/components/StyleCard";
 import { styleSelectionData, roomSelectionData } from "@/lib/data";
-
-export const metadata = {
-  title: "Choose Your Style | HavenDecor",
-  description:
-    "Select a design style — Modern, Minimalist, Scandinavian, Industrial, Bohemian, or Rustic — to personalize your room on HavenDecor.",
-};
+import { useDesign } from "@/context/DesignContext";
+import { useSearchParams } from "next/navigation";
 
 const breadcrumbItems = [
   { label: "Home", href: "/" },
@@ -27,15 +26,13 @@ function getRoomName(roomSlug) {
 }
 
 /**
- * /select-style — Step 2 of the design flow.
- *
- * Reads the `room` query param forwarded from /select-room via RoomCard.
- * Passes it down to StyleCard so each CTA builds the correct URL:
- *   /designer?room=bedroom&style=modern
+ * The inner content of the select-style page that uses search params.
  */
-export default function SelectStylePage({ searchParams }) {
-  const roomSlug = searchParams?.room ?? null;
-  const roomName = getRoomName(roomSlug);
+function SelectStylePageContent() {
+  const { selectedRoom } = useDesign();
+  const searchParams = useSearchParams();
+  const roomSlug = selectedRoom?.slug ?? searchParams.get("room") ?? null;
+  const roomName = selectedRoom?.name ?? getRoomName(roomSlug) ?? null;
 
   return (
     <>
@@ -160,5 +157,17 @@ export default function SelectStylePage({ searchParams }) {
 
       <Footer />
     </>
+  );
+}
+
+export default function SelectStylePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-cream">
+        <p className="font-display text-xl text-stone-600 animate-pulse">Loading design styles...</p>
+      </div>
+    }>
+      <SelectStylePageContent />
+    </Suspense>
   );
 }

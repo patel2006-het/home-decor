@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { wallColors, floorTypes } from "@/lib/data";
 import DesignerSidebar from "@/components/designer/DesignerSidebar";
 import DesignerPreview from "@/components/designer/DesignerPreview";
+import { useDesign } from "@/context/DesignContext";
 
 /**
  * DesignerClient — The single "use client" boundary for the /designer page.
@@ -21,7 +22,12 @@ import DesignerPreview from "@/components/designer/DesignerPreview";
  * @param {{ slug, name, image, description }} room
  * @param {{ slug, name, image, description }} style
  */
-export default function DesignerClient({ room, style }) {
+export default function DesignerClient({ room: initialRoom, style: initialStyle }) {
+  const { selectedRoom, selectedStyle } = useDesign();
+
+  const room = selectedRoom || initialRoom;
+  const style = selectedStyle || initialStyle;
+
   const [selectedColor, setSelectedColor]   = useState(wallColors[0]);
   const [selectedFloor, setSelectedFloor]   = useState(floorTypes[0]);
   const [furnitureItems, setFurnitureItems] = useState([]);

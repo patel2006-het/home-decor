@@ -38,19 +38,21 @@ function resolveStyle(slug) {
 }
 
 /**
- * /designer — Step 4: Design Studio page.
+ * /designer — Design Studio page.
  *
- * Server component — reads ?room= and ?style= from the URL query string
- * (passed forward from /select-style via StyleCard's href).
+ * Async server component — Next.js 16 App Router requires searchParams
+ * to be awaited before its properties can be accessed.
  *
- * Resolves full data objects and passes them to DesignerClient
- * (the "use client" boundary that owns all interactive state).
+ * Resolves full room + style data objects from query params and passes them
+ * to DesignerClient (the "use client" boundary that owns all interactive state).
  *
  * URL pattern: /designer?room=bedroom&style=modern
  */
-export default function DesignerPage({ searchParams }) {
-  const roomSlug  = searchParams?.room  ?? "living-room";
-  const styleSlug = searchParams?.style ?? "modern";
+export default async function DesignerPage({ searchParams }) {
+  const params = await searchParams;
+
+  const roomSlug  = params?.room  ?? "living-room";
+  const styleSlug = params?.style ?? "modern";
 
   const room  = resolveRoom(roomSlug);
   const style = resolveStyle(styleSlug);

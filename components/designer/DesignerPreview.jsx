@@ -105,8 +105,15 @@ export default function DesignerPreview({
               {/* ── Furniture items — rendered against the wall ── */}
               {furnitureItems.length > 0 && (
                 <div
-                  className="absolute inset-x-4 bottom-4 flex flex-wrap items-end justify-center gap-3"
-                  aria-label="Placed furniture"
+                  className="absolute inset-0 pointer-events-none"
+                  aria-label="Placed furniture canvas"
+                  onDragOver={(e) => {
+                    e.preventDefault(); // Necessary to allow dropping items
+                  }}
+                  onDrop={(e) => {
+                    // Placeholder for future drag & drop coordinate saving
+                    console.log("Item dropped on canvas", e);
+                  }}
                 >
                   {furnitureItems.map((instance) => (
                     <FurniturePreviewItem

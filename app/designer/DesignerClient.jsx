@@ -23,54 +23,21 @@ import { useDesign } from "@/context/DesignContext";
  * @param {{ slug, name, image, description }} style
  */
 export default function DesignerClient({ room: initialRoom, style: initialStyle }) {
-  const { selectedRoom, selectedStyle } = useDesign();
+  const {
+    selectedRoom,
+    selectedStyle,
+    furnitureItems,
+    addFurnitureItem,
+    removeFurnitureItemById,
+    removeFurnitureItemByInstance,
+  } = useDesign();
 
   const room = selectedRoom || initialRoom;
   const style = selectedStyle || initialStyle;
 
   const [selectedColor, setSelectedColor]   = useState(wallColors[0]);
   const [selectedFloor, setSelectedFloor]   = useState(floorTypes[0]);
-  const [furnitureItems, setFurnitureItems] = useState([]);
   const [sidebarOpen, setSidebarOpen]       = useState(false);
-
-  /**
-   * Add a furniture item to the preview.
-   * Uses the item's id as the key (one instance per item type for now).
-   * Step 6 will change this to use a unique instanceId + support multiples.
-   */
-  const handleFurnitureAdd = useCallback((item) => {
-    setFurnitureItems((prev) => {
-      // Prevent adding the same item twice (Step 6 will lift this restriction)
-      if (prev.some((p) => p.id === item.id)) return prev;
-      return [
-        ...prev,
-        {
-          ...item,
-          instanceId: `${item.id}-${Date.now()}`, // unique per placement
-        },
-      ];
-    });
-  }, []);
-
-  /**
-   * Remove a furniture item from the preview by its base item id.
-   * Called from both the FurnitureCard ("✓ Added" button) and the
-   * FurniturePreviewItem's remove (×) button.
-   */
-  const handleFurnitureRemoveById = useCallback((itemId) => {
-    setFurnitureItems((prev) => prev.filter((p) => p.id !== itemId));
-  }, []);
-
-  /**
-   * Remove a furniture instance by its unique instanceId.
-   * Called by FurniturePreviewItem's × button.
-   * (Prepares for Step 6 multi-instance support.)
-   */
-  const handleFurnitureRemoveByInstance = useCallback((instanceId) => {
-    setFurnitureItems((prev) =>
-      prev.filter((p) => p.instanceId !== instanceId)
-    );
-  }, []);
 
   return (
     <div className="flex h-[calc(100vh-65px)] flex-col overflow-hidden lg:flex-row">
@@ -111,8 +78,8 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
           onColorChange={setSelectedColor}
           onFloorChange={setSelectedFloor}
           placedFurniture={furnitureItems}
-          onFurnitureAdd={handleFurnitureAdd}
-          onFurnitureRemove={handleFurnitureRemoveById}
+          onFurnitureAdd={addFurnitureItem}
+          onFurnitureRemove={removeFurnitureItemById}
         />
       </div>
 
@@ -124,7 +91,7 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
           roomName={room.name}
           styleName={style.name}
           furnitureItems={furnitureItems}
-          onFurnitureRemove={handleFurnitureRemoveByInstance}
+          onFurnitureRemove={removeFurnitureItemByInstance}
         />
       </main>
     </div>

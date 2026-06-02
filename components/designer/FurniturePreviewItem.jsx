@@ -8,12 +8,28 @@
  * @param {function} onRemove - called with instanceId to remove from preview
  */
 export default function FurniturePreviewItem({ instance, onRemove }) {
-  const { instanceId, id, name, icon, color, width, height } = instance;
+  const { instanceId, id, name, icon, color, width, height, position } = instance;
+
+  // If a position exists, use absolute coordinates. Otherwise, use relative flow layout.
+  // This prepares the architecture for drag-and-drop (Requirement 7).
+  const styleProps = position
+    ? {
+        position: "absolute",
+        left: `${position.x}%`,
+        top: `${position.y}%`,
+        transform: "translate(-50%, -50%)",
+        width: `${Math.min(width, 100)}px`,
+      }
+    : {
+        width: `${Math.min(width, 100)}px`,
+      };
 
   return (
     <div
-      className="group relative flex flex-col items-center gap-1"
-      style={{ width: `${Math.min(width, 100)}px` }}
+      className={`group flex flex-col items-center gap-1 ${
+        position ? "pointer-events-auto" : "relative"
+      }`}
+      style={styleProps}
       /* Step 6 drag hooks */
       data-furniture-id={id}
       data-instance-id={instanceId}

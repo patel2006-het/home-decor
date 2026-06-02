@@ -1,3 +1,5 @@
+import FurniturePreviewItem from "@/components/designer/FurniturePreviewItem";
+
 /**
  * DesignerPreview — The main room canvas area.
  *
@@ -5,14 +7,16 @@
  * and floor plane — all updated instantly via inline style changes driven
  * by the selected wallColor and floorType from state.
  *
- * The `furnitureItems` slot is already scaffolded for Step 5 furniture placement.
+ * Furniture items placed by the user are rendered as FurniturePreviewItem tiles
+ * along the bottom of the wall (above the floor line).
  *
- * @param {object} props
- * @param {string} props.wallColor - hex string for the wall color
- * @param {string} props.floorPattern - CSS background value for the floor
- * @param {string} props.roomName - display name for the room
- * @param {string} props.styleName - display name for the style
- * @param {Array}  props.furnitureItems - (future Step 5) placed furniture items
+ * @param {object}   props
+ * @param {string}   props.wallColor          - hex string for the wall color
+ * @param {string}   props.floorPattern       - CSS background value for the floor
+ * @param {string}   props.roomName           - display name for the room
+ * @param {string}   props.styleName          - display name for the style
+ * @param {Array}    props.furnitureItems     - array of placed furniture instances
+ * @param {function} props.onFurnitureRemove  - called with instanceId to remove an item
  */
 export default function DesignerPreview({
   wallColor,
@@ -20,6 +24,7 @@ export default function DesignerPreview({
   roomName,
   styleName,
   furnitureItems = [],
+  onFurnitureRemove,
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -82,10 +87,8 @@ export default function DesignerPreview({
                 aria-hidden="true"
               >
                 <div className="relative h-32 w-24 overflow-hidden rounded-t-full border-4 border-white/50 bg-sky-200/60 shadow-inner">
-                  {/* Window pane lines */}
                   <div className="absolute inset-x-0 top-1/2 h-px bg-white/50" />
                   <div className="absolute inset-y-0 left-1/2 w-px bg-white/50" />
-                  {/* Sky gradient */}
                   <div className="absolute inset-0 bg-gradient-to-b from-sky-300/40 to-sky-100/20" />
                 </div>
               </div>
@@ -98,6 +101,31 @@ export default function DesignerPreview({
                 }}
                 aria-hidden="true"
               />
+
+              {/* ── Furniture items — rendered against the wall ── */}
+              {furnitureItems.length > 0 && (
+                <div
+                  className="absolute inset-x-4 bottom-4 flex flex-wrap items-end justify-center gap-3"
+                  aria-label="Placed furniture"
+                >
+                  {furnitureItems.map((instance) => (
+                    <FurniturePreviewItem
+                      key={instance.instanceId}
+                      instance={instance}
+                      onRemove={onFurnitureRemove}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Empty state hint */}
+              {furnitureItems.length === 0 && (
+                <div className="absolute inset-x-0 bottom-8 flex items-center justify-center">
+                  <p className="rounded-full bg-black/10 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm">
+                    Add furniture from the sidebar →
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* ── Left wall (perspective side panel) ── */}
@@ -124,25 +152,6 @@ export default function DesignerPreview({
               }}
               aria-hidden="true"
             />
-
-            {/* ── Furniture slot — ready for Step 5 ── */}
-            {furnitureItems.length > 0 && (
-              <div
-                className="absolute inset-x-0 bottom-0 flex items-end justify-center gap-4 pb-2"
-                aria-label="Placed furniture"
-              >
-                {furnitureItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="relative"
-                    style={{ width: item.width, height: item.height }}
-                  >
-                    {/* Furniture rendering will go here in Step 5 */}
-                    <div className="h-full w-full rounded-lg bg-stone-300/50" />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -164,6 +173,13 @@ export default function DesignerPreview({
               aria-hidden="true"
             />
           </div>
+          {furnitureItems.length > 0 && (
+            <div className="flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50/90 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+              <span className="text-xs font-medium text-brand-700">
+                {furnitureItems.length} item{furnitureItems.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

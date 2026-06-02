@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { wallColors, floorTypes } from "@/lib/data";
 import DesignerSidebar from "@/components/designer/DesignerSidebar";
 import DesignerPreview from "@/components/designer/DesignerPreview";
@@ -9,21 +9,62 @@ import DesignerPreview from "@/components/designer/DesignerPreview";
  * DesignerClient — The single "use client" boundary for the /designer page.
  *
  * Owns all interactive state:
- *  - selectedColor   (wall color)
- *  - selectedFloor   (floor type)
- *  - furnitureItems  (scaffolded for Step 5 — currently always [])
- *  - sidebarOpen     (mobile sidebar toggle)
+ *  - selectedColor    (wall color)
+ *  - selectedFloor    (floor type)
+ *  - furnitureItems   (placed furniture instances — Step 5)
+ *  - sidebarOpen      (mobile sidebar toggle)
  *
- * Receives room + style data as plain props from the server component (page.js).
+ * Furniture state shape:
+ *  { instanceId: string, id: string, name, icon, color, width, height }
+ *  instanceId is unique per placement (same item can be added multiple times in Step 6).
  *
- * @param {{ name, image, description }} room
- * @param {{ name, image, description }} style
+ * @param {{ slug, name, image, description }} room
+ * @param {{ slug, name, image, description }} style
  */
 export default function DesignerClient({ room, style }) {
-  const [selectedColor, setSelectedColor] = useState(wallColors[0]);
-  const [selectedFloor, setSelectedFloor] = useState(floorTypes[0]);
-  const [furnitureItems]                  = useState([]); // Step 5 placeholder
-  const [sidebarOpen, setSidebarOpen]     = useState(false);
+  const [selectedColor, setSelectedColor]   = useState(wallColors[0]);
+  const [selectedFloor, setSelectedFloor]   = useState(floorTypes[0]);
+  const [furnitureItems, setFurnitureItems] = useState([]);
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
+
+  /**
+   * Add a furniture item to the preview.
+   * Uses the item's id as the key (one instance per item type for now).
+   * Step 6 will change this to use a unique instanceId + support multiples.
+   */
+  const handleFurnitureAdd = useCallback((item) => {
+    setFurnitureItems((prev) => {
+      // Prevent adding the same item twice (Step 6 will lift this restriction)
+      if (prev.some((p) => p.id === item.id)) return prev;
+      return [
+        ...prev,
+        {
+          ...item,
+          instanceId: `${item.id}-${Date.now()}`, // unique per placement
+        },
+      ];
+    });
+  }, []);
+
+  /**
+   * Remove a furniture item from the preview by its base item id.
+   * Called from both the FurnitureCard ("✓ Added" button) and the
+   * FurniturePreviewItem's remove (×) button.
+   */
+  const handleFurnitureRemoveById = useCallback((itemId) => {
+    setFurnitureItems((prev) => prev.filter((p) => p.id !== itemId));
+  }, []);
+
+  /**
+   * Remove a furniture instance by its unique instanceId.
+   * Called by FurniturePreviewItem's × button.
+   * (Prepares for Step 6 multi-instance support.)
+   */
+  const handleFurnitureRemoveByInstance = useCallback((instanceId) => {
+    setFurnitureItems((prev) =>
+      prev.filter((p) => p.instanceId !== instanceId)
+    );
+  }, []);
 
   return (
     <div className="flex h-[calc(100vh-65px)] flex-col overflow-hidden lg:flex-row">
@@ -51,7 +92,7 @@ export default function DesignerClient({ room, style }) {
       {/* ── Sidebar ── */}
       <div
         id="designer-sidebar"
-        className={`shrink-0 border-b border-stone-200 lg:w-72 lg:border-b-0 xl:w-80 ${
+        className={`shrink-0 overflow-y-auto border-b border-stone-200 lg:w-72 lg:border-b-0 xl:w-80 ${
           sidebarOpen ? "block" : "hidden lg:block"
         }`}
         style={{ maxHeight: sidebarOpen ? "60vh" : undefined }}
@@ -63,6 +104,9 @@ export default function DesignerClient({ room, style }) {
           selectedFloor={selectedFloor}
           onColorChange={setSelectedColor}
           onFloorChange={setSelectedFloor}
+          placedFurniture={furnitureItems}
+          onFurnitureAdd={handleFurnitureAdd}
+          onFurnitureRemove={handleFurnitureRemoveById}
         />
       </div>
 
@@ -74,6 +118,7 @@ export default function DesignerClient({ room, style }) {
           roomName={room.name}
           styleName={style.name}
           furnitureItems={furnitureItems}
+          onFurnitureRemove={handleFurnitureRemoveByInstance}
         />
       </main>
     </div>

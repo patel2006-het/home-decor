@@ -6,6 +6,7 @@ import { OrbitControls } from "@react-three/drei";
 import RoomFloor from "@/components/3d/RoomFloor";
 import RoomWalls from "@/components/3d/RoomWalls";
 import FurnitureModel3D from "@/components/3d/FurnitureModel3D";
+import RoomLighting from "@/components/3d/RoomLighting";
 
 /**
  * RoomScene — Renders the WebGL 3D Room Scene using React Three Fiber.
@@ -30,25 +31,8 @@ export default function RoomScene({
         camera={{ position: [0, 2.5, 7.5], fov: 45 }}
         style={{ pointerEvents: "auto" }}
       >
-        {/* ── Lighting ── */}
-        <ambientLight intensity={0.55} />
-        
-        {/* Key directional light cast from top-right-front */}
-        <directionalLight
-          position={[6, 9, 6]}
-          intensity={1.0}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-camera-far={25}
-          shadow-camera-left={-4}
-          shadow-camera-right={4}
-          shadow-camera-top={4}
-          shadow-camera-bottom={-4}
-        />
-        
-        {/* Soft fill point light in the back left corner */}
-        <pointLight position={[-4, 2.2, -2]} intensity={0.4} />
+        {/* Reusable Scene Lighting */}
+        <RoomLighting />
 
         {/* ── Room Diorama Group ── */}
         <group position={[0, -0.7, 0]}>

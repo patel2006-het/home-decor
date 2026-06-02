@@ -45,6 +45,24 @@ export function DesignProvider({ children }) {
     );
   };
 
+  const saveDesign = () => {
+    const designData = {
+      room: selectedRoom,
+      style: selectedStyle,
+      furniture: furnitureItems,
+    };
+    console.log("Saving design:", designData);
+    return designData;
+  };
+
+  const loadDesign = (designData) => {
+    if (!designData) return;
+    if (designData.room) setSelectedRoom(designData.room);
+    if (designData.style) setSelectedStyle(designData.style);
+    if (designData.furniture) setFurnitureItems(designData.furniture);
+    console.log("Design loaded successfully.");
+  };
+
   return (
     <DesignContext.Provider
       value={{
@@ -58,6 +76,8 @@ export function DesignProvider({ children }) {
         removeFurnitureItemById,
         removeFurnitureItemByInstance,
         updateFurniturePosition,
+        saveDesign,
+        loadDesign,
       }}
     >
       {children}

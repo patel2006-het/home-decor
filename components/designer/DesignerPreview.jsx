@@ -3,10 +3,10 @@
 import dynamic from "next/dynamic";
 import React from "react";
 
-// Dynamically import RoomCanvas3D with SSR disabled to prevent hydration mismatches
+// Dynamically import RoomScene with SSR disabled to prevent hydration mismatches
 // because WebGL and Three.js rely on browser-only window/WebGLContext APIs.
-const RoomCanvas3D = dynamic(
-  () => import("@/components/designer/RoomCanvas3D"),
+const RoomScene = dynamic(
+  () => import("@/components/3d/RoomScene"),
   { ssr: false }
 );
 
@@ -52,7 +52,7 @@ export default function DesignerPreview({
 
       {/* ── WebGL 3D Canvas Area ── */}
       <div className="relative flex-1 overflow-hidden">
-        <RoomCanvas3D
+        <RoomScene
           wallColor={wallColor}
           selectedFloor={selectedFloor}
           furnitureItems={furnitureItems}

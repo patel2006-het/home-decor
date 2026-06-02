@@ -87,7 +87,7 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
       <main className="flex flex-1 flex-col overflow-hidden">
         <DesignerPreview
           wallColor={selectedColor.hex}
-          floorPattern={selectedFloor.pattern}
+          selectedFloor={selectedFloor}
           roomName={room.name}
           styleName={style.name}
           furnitureItems={furnitureItems}

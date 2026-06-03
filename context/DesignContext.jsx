@@ -1,13 +1,15 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { roomSelectionData } from "@/lib/data";
 
 const DesignContext = createContext(undefined);
 
 export function DesignProvider({ children }) {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
-  const [furnitureItems, setFurnitureItems] = useState([]);
+  const [roomsList, setRoomsList] = useState([]);
+  const [activeRoomId, setActiveRoomId] = useState(null);
   const [selectedInstanceId, setSelectedInstanceId] = useState(null);
   const [transformMode, setTransformMode] = useState("translate");
 
@@ -25,73 +27,195 @@ export function DesignProvider({ children }) {
     shadowsEnabled: true,
   };
 
-  const [roomMaterials, setRoomMaterials] = useState(defaultMaterials);
-  const [globalLighting, setGlobalLighting] = useState(defaultGlobalLighting);
+  // Derive active room state on the fly
+  const activeRoom = roomsList.find((r) => r.id === activeRoomId) || roomsList[0];
+  const furnitureItems = activeRoom ? activeRoom.furnitureItems : [];
+  const roomMaterials = activeRoom ? activeRoom.roomMaterials : defaultMaterials;
+  const globalLighting = activeRoom ? activeRoom.globalLighting : defaultGlobalLighting;
+
+  const initializeHouse = (room) => {
+    if (!room) return;
+    setSelectedRoom(room);
+    setRoomsList((prev) => {
+      if (prev.length > 0) return prev; // Do not overwrite if already initialized
+      const initialRoomObj = {
+        id: `${room.slug}-${Date.now()}`,
+        type: room.slug,
+        name: room.name,
+        furnitureItems: [],
+        roomMaterials: { ...defaultMaterials },
+        globalLighting: { ...defaultGlobalLighting },
+      };
+      setActiveRoomId(initialRoomObj.id);
+      return [initialRoomObj];
+    });
+  };
 
   const handleSetSelectedRoom = (room) => {
     setSelectedRoom(room);
-    setFurnitureItems([]); // Reset furniture items when room changes
-    setSelectedInstanceId(null); // Clear selected item
-    setRoomMaterials(defaultMaterials); // Reset materials
-    setGlobalLighting(defaultGlobalLighting); // Reset global lighting
+    const initialRoomObj = {
+      id: `${room.slug}-${Date.now()}`,
+      type: room.slug,
+      name: room.name,
+      furnitureItems: [],
+      roomMaterials: { ...defaultMaterials },
+      globalLighting: { ...defaultGlobalLighting },
+    };
+    setRoomsList([initialRoomObj]);
+    setActiveRoomId(initialRoomObj.id);
+    setSelectedInstanceId(null);
+  };
+
+  const addRoom = (type, customName) => {
+    const roomData = roomSelectionData.find((r) => r.slug === type);
+    const defaultName = roomData ? roomData.name : type.charAt(0).toUpperCase() + type.slice(1);
+    
+    // Count how many rooms of this type already exist
+    const typeCount = roomsList.filter((r) => r.type === type).length;
+    const name = customName?.trim() || (typeCount > 0 ? `${defaultName} ${typeCount + 1}` : defaultName);
+
+    const newRoom = {
+      id: `${type}-${Date.now()}`,
+      type,
+      name,
+      furnitureItems: [],
+      roomMaterials: { ...defaultMaterials },
+      globalLighting: { ...defaultGlobalLighting },
+    };
+
+    setRoomsList((prev) => [...prev, newRoom]);
+    setActiveRoomId(newRoom.id);
+    setSelectedInstanceId(null);
+    console.log(`[HouseBuilder] Added new room: ${name} (${type})`);
+  };
+
+  const removeRoom = (roomId) => {
+    if (roomsList.length <= 1) {
+      console.warn("[HouseBuilder] Cannot remove the only room in the house.");
+      return;
+    }
+    
+    setRoomsList((prev) => {
+      const filtered = prev.filter((r) => r.id !== roomId);
+      if (activeRoomId === roomId) {
+        const deletedIndex = prev.findIndex((r) => r.id === roomId);
+        const nextActiveIndex = deletedIndex > 0 ? deletedIndex - 1 : 0;
+        const nextActiveRoom = filtered[nextActiveIndex] || filtered[0];
+        setActiveRoomId(nextActiveRoom.id);
+        setSelectedInstanceId(null);
+      }
+      return filtered;
+    });
+    console.log(`[HouseBuilder] Removed room: ${roomId}`);
+  };
+
+  const renameRoom = (roomId, newName) => {
+    if (!newName || !newName.trim()) return;
+    setRoomsList((prev) =>
+      prev.map((r) => (r.id === roomId ? { ...r, name: newName.trim() } : r))
+    );
+    console.log(`[HouseBuilder] Renamed room ${roomId} to "${newName.trim()}"`);
+  };
+
+  const handleSetFurnitureItems = (updater) => {
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+        const updated = typeof updater === "function" ? updater(room.furnitureItems) : updater;
+        return {
+          ...room,
+          furnitureItems: updated,
+        };
+      })
+    );
   };
 
   const updateGlobalLighting = (updates) => {
-    setGlobalLighting((prev) => ({
-      ...prev,
-      ...updates,
-    }));
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+        return {
+          ...room,
+          globalLighting: {
+            ...room.globalLighting,
+            ...updates,
+          },
+        };
+      })
+    );
     console.log("[LightingStudio] Updated global lighting settings:", updates);
   };
 
   const updateRoomMaterials = (target, materialData) => {
-    setRoomMaterials((prev) => ({
-      ...prev,
-      [target]: {
-        ...prev[target],
-        ...materialData,
-      },
-    }));
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+        return {
+          ...room,
+          roomMaterials: {
+            ...room.roomMaterials,
+            [target]: {
+              ...room.roomMaterials[target],
+              ...materialData,
+            },
+          },
+        };
+      })
+    );
     console.log(`[MaterialsStudio] Updated ${target} materials:`, materialData);
   };
 
   const addFurnitureItem = (item) => {
-    setFurnitureItems((prev) => {
-      // Prevent adding the same furniture item type twice, but allow multiple doors, windows, curtains, and lights
-      if (!item.isArchitectural && !item.isLight && prev.some((p) => p.id === item.id)) return prev;
-      const newInstance = {
-        ...item,
-        instanceId: `${item.id}-${Date.now()}`,
-        type: item.category || "Furniture", // Explicitly store type
-        position: { x: 50, y: 50 }, // default relative position coordinates (centered)
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 1, y: 1, z: 1 },
-      };
-      if (item.isLight) {
-        newInstance.lightSettings = {
-          color: "#ffedd5", // default cozy warm amber light
-          intensity: 1.5,
-          temperature: 3000, // cozy warm 3000 Kelvin
-          range: 5,
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+
+        const prevItems = room.furnitureItems;
+        if (!item.isArchitectural && !item.isLight && prevItems.some((p) => p.id === item.id)) return room;
+
+        const newInstance = {
+          ...item,
+          instanceId: `${item.id}-${Date.now()}`,
+          type: item.category || "Furniture",
+          position: { x: 50, y: 50 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 },
         };
-      }
-      // Auto-select the newly added item
-      setSelectedInstanceId(newInstance.instanceId);
-      console.log(`[FurnitureManager] Added item ${item.name} (type: ${newInstance.type}) to room`);
-      return [...prev, newInstance];
-    });
+        if (item.isLight) {
+          newInstance.lightSettings = {
+            color: "#ffedd5",
+            intensity: 1.5,
+            temperature: 3000,
+            range: 5,
+          };
+        }
+        setSelectedInstanceId(newInstance.instanceId);
+        console.log(`[FurnitureManager] Added item ${item.name} to room ${room.name}`);
+        return {
+          ...room,
+          furnitureItems: [...prevItems, newInstance],
+        };
+      })
+    );
   };
 
   const removeFurnitureItemById = (itemId) => {
-    setFurnitureItems((prev) => {
-      const remaining = prev.filter((p) => p.id !== itemId);
-      // If the currently selected item is removed, deselect it
-      const isSelectedRemoved = prev.find((p) => p.id === itemId)?.instanceId === selectedInstanceId;
-      if (isSelectedRemoved) {
-        setSelectedInstanceId(null);
-      }
-      return remaining;
-    });
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+
+        const prevItems = room.furnitureItems;
+        const remaining = prevItems.filter((p) => p.id !== itemId);
+        const isSelectedRemoved = prevItems.find((p) => p.id === itemId)?.instanceId === selectedInstanceId;
+        if (isSelectedRemoved) {
+          setSelectedInstanceId(null);
+        }
+        return {
+          ...room,
+          furnitureItems: remaining,
+        };
+      })
+    );
   };
 
   const removeFurnitureItemByInstance = (instanceId) => {
@@ -99,41 +223,51 @@ export function DesignProvider({ children }) {
       setSelectedInstanceId(null);
     }
     console.log(`[FurnitureManager] Removed instance ${instanceId}`);
-    setFurnitureItems((prev) => prev.filter((p) => p.instanceId !== instanceId));
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+        return {
+          ...room,
+          furnitureItems: room.furnitureItems.filter((p) => p.instanceId !== instanceId),
+        };
+      })
+    );
   };
 
   const updateFurniturePosition = (instanceId, x, y) => {
     console.log(`[FurnitureManager] Position updated for instance ${instanceId}: X: ${x.toFixed(1)}%, Y: ${y.toFixed(1)}%`);
-    setFurnitureItems((prev) =>
-      prev.map((p) =>
-        p.instanceId === instanceId ? { ...p, position: { x, y } } : p
-      )
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+        return {
+          ...room,
+          furnitureItems: room.furnitureItems.map((p) =>
+            p.instanceId === instanceId ? { ...p, position: { x, y } } : p
+          ),
+        };
+      })
     );
   };
 
   const updateFurnitureTransform = (instanceId, updates) => {
     const { position, rotation, scale, heightOffset, material, lightSettings } = updates;
-    if (position) {
-      console.log(`[FurnitureManager] Position updated for instance ${instanceId}: X: ${position.x.toFixed(1)}%, Z: ${position.y.toFixed(1)}%`);
-    }
-    if (rotation) {
-      console.log(`[FurnitureManager] Rotation updated for instance ${instanceId}: Y-angle: ${((rotation.y * 180) / Math.PI).toFixed(0)}°`);
-    }
-    if (scale) {
-      console.log(`[FurnitureManager] Scale updated for instance ${instanceId}: X: ${scale.x.toFixed(2)}, Y: ${scale.y.toFixed(2)}, Z: ${scale.z.toFixed(2)}`);
-    }
-
-    setFurnitureItems((prev) =>
-      prev.map((p) => {
-        if (p.instanceId !== instanceId) return p;
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
         return {
-          ...p,
-          position: position !== undefined ? position : p.position,
-          rotation: rotation !== undefined ? rotation : p.rotation,
-          scale: scale !== undefined ? scale : p.scale,
-          heightOffset: heightOffset !== undefined ? heightOffset : p.heightOffset,
-          material: material !== undefined ? material : p.material,
-          lightSettings: lightSettings !== undefined ? { ...p.lightSettings, ...lightSettings } : p.lightSettings,
+          ...room,
+          furnitureItems: room.furnitureItems.map((p) => {
+            if (p.instanceId !== instanceId) return p;
+            return {
+              ...p,
+              position: position !== undefined ? position : p.position,
+              rotation: rotation !== undefined ? rotation : p.rotation,
+              scale: scale !== undefined ? scale : p.scale,
+              heightOffset: heightOffset !== undefined ? heightOffset : p.heightOffset,
+              material: material !== undefined ? material : p.material,
+              lightSettings: lightSettings !== undefined ? { ...p.lightSettings, ...lightSettings } : p.lightSettings,
+            };
+          }),
         };
       })
     );
@@ -141,21 +275,43 @@ export function DesignProvider({ children }) {
 
   const saveDesign = () => {
     const designData = {
-      room: selectedRoom,
-      style: selectedStyle,
-      furniture: furnitureItems,
+      selectedRoom,
+      selectedStyle,
+      roomsList,
+      activeRoomId,
     };
-    console.log("Saving design:", designData);
+    console.log("Saving multi-room design:", designData);
     return designData;
   };
 
   const loadDesign = (designData) => {
     if (!designData) return;
-    if (designData.room) setSelectedRoom(designData.room);
-    if (designData.style) setSelectedStyle(designData.style);
-    if (designData.furniture) setFurnitureItems(designData.furniture);
+    if (designData.roomsList) {
+      setRoomsList(designData.roomsList);
+      if (designData.activeRoomId) setActiveRoomId(designData.activeRoomId);
+      if (designData.selectedRoom) setSelectedRoom(designData.selectedRoom);
+    } else {
+      // Legacy single-room load
+      const legacyRoom = designData.room || selectedRoom;
+      if (legacyRoom) {
+        setSelectedRoom(legacyRoom);
+        const legacyRoomObj = {
+          id: `${legacyRoom.slug}-legacy`,
+          type: legacyRoom.slug,
+          name: legacyRoom.name,
+          furnitureItems: designData.furniture || [],
+          roomMaterials: designData.roomMaterials || defaultMaterials,
+          globalLighting: designData.globalLighting || defaultGlobalLighting,
+        };
+        setRoomsList([legacyRoomObj]);
+        setActiveRoomId(legacyRoomObj.id);
+      }
+    }
+    if (designData.selectedStyle) setSelectedStyle(designData.selectedStyle);
+    else if (designData.style) setSelectedStyle(designData.style);
+    
     setSelectedInstanceId(null);
-    console.log("Design loaded successfully.");
+    console.log("Multi-room design loaded successfully.");
   };
 
   return (
@@ -166,7 +322,7 @@ export function DesignProvider({ children }) {
         selectedStyle,
         setSelectedStyle,
         furnitureItems,
-        setFurnitureItems,
+        setFurnitureItems: handleSetFurnitureItems,
         addFurnitureItem,
         removeFurnitureItemById,
         removeFurnitureItemByInstance,
@@ -182,6 +338,14 @@ export function DesignProvider({ children }) {
         updateGlobalLighting,
         saveDesign,
         loadDesign,
+        // Multi-Room states and actions
+        roomsList,
+        activeRoomId,
+        setActiveRoomId,
+        addRoom,
+        removeRoom,
+        renameRoom,
+        initializeHouse,
       }}
     >
       {children}

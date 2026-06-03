@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DesignerSidebar from "@/components/designer/DesignerSidebar";
 import DesignerPreview from "@/components/designer/DesignerPreview";
 import { useDesign } from "@/context/DesignContext";
+import { roomSelectionData } from "@/lib/data";
 
 /**
  * DesignerClient — The single "use client" boundary for the /designer page.
@@ -20,9 +21,26 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
     selectedRoom,
     selectedStyle,
     furnitureItems,
+    roomsList,
+    activeRoomId,
+    initializeHouse,
   } = useDesign();
 
-  const room = selectedRoom || initialRoom;
+  useEffect(() => {
+    if (roomsList.length === 0) {
+      initializeHouse(initialRoom);
+    }
+  }, [initialRoom, roomsList, initializeHouse]);
+
+  const activeRoomObj = roomsList.find((r) => r.id === activeRoomId) || roomsList[0];
+  const baseRoom = selectedRoom || initialRoom;
+  const roomMeta = roomSelectionData.find((r) => r.slug === (activeRoomObj?.type || baseRoom.slug)) || baseRoom;
+
+  const room = {
+    ...roomMeta,
+    slug: activeRoomObj?.type || baseRoom.slug,
+    name: activeRoomObj?.name || baseRoom.name,
+  };
   const style = selectedStyle || initialStyle;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);

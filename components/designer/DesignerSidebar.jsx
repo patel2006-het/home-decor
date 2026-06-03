@@ -1,5 +1,6 @@
 import FurnitureLibrary from "@/components/3d/FurnitureLibrary";
 import Image from "next/image";
+import HouseBuilderPanel from "@/components/designer/HouseBuilderPanel";
 
 /**
  * DesignerSidebar — Left panel of the designer page.
@@ -30,35 +31,8 @@ export default function DesignerSidebar({
       </div>
 
       <div className="flex flex-col gap-px overflow-y-auto">
-        {/* ── Room Info ── */}
-        <section className="border-b border-stone-100 px-5 py-4">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">
-            Selected Room
-          </h3>
-          <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
-              <Image
-                src={room.image}
-                alt={room.name}
-                fill
-                className="object-cover"
-                sizes="48px"
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-stone-900">{room.name}</p>
-              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-stone-500">
-                {room.description}
-              </p>
-            </div>
-          </div>
-          <a
-            href="/select-room"
-            className="mt-2 inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 hover:underline"
-          >
-            ← Change room
-          </a>
-        </section>
+        {/* ── House Builder Mode & Layout Panel ── */}
+        <HouseBuilderPanel />
 
         {/* ── Style Info ── */}
         <section className="border-b border-stone-100 px-5 py-4">

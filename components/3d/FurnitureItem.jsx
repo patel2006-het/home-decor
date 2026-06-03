@@ -92,11 +92,28 @@ export default function FurnitureItem({ instance }) {
       if (meshRef.current) {
         const currentMesh = meshRef.current;
         
+        // Clamp boundary limits
+        const minX = -2.7;
+        const maxX = 2.7;
+        const minZ = -2.2;
+        const maxZ = 2.2;
+
+        if (currentMesh.position.x < minX) currentMesh.position.x = minX;
+        if (currentMesh.position.x > maxX) currentMesh.position.x = maxX;
+        if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
+        if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
+
+        currentMesh.position.y = isWallMounted ? 1.5 : 0;
+        currentMesh.rotation.x = 0;
+        currentMesh.rotation.z = 0;
+
+        currentMesh.scale.x = Math.max(0.3, Math.min(3.0, currentMesh.scale.x));
+        currentMesh.scale.y = Math.max(0.3, Math.min(3.0, currentMesh.scale.y));
+        currentMesh.scale.z = Math.max(0.3, Math.min(3.0, currentMesh.scale.z));
+
         // Convert the mesh's local position back to percentage-based coordinates
-        const newX3D = currentMesh.position.x;
-        const newZ3D = currentMesh.position.z;
-        const newPctX = Math.max(0, Math.min(100, ((newX3D + 2.7) / 5.4) * 100));
-        const newPctY = Math.max(0, Math.min(100, ((newZ3D + 2.2) / 4.4) * 100));
+        const newPctX = Math.max(0, Math.min(100, ((currentMesh.position.x + 2.7) / 5.4) * 100));
+        const newPctY = Math.max(0, Math.min(100, ((currentMesh.position.z + 2.2) / 4.4) * 100));
 
         // Extract rotation (Y rotation is primary for floor objects)
         const newRot = {
@@ -121,14 +138,37 @@ export default function FurnitureItem({ instance }) {
       }
     };
 
-    // Track real-time coordinates during active dragging
+    // Track real-time coordinates during active dragging and enforce boundary limits
     const handleObjectChange = () => {
       if (meshRef.current) {
         const currentMesh = meshRef.current;
-        const newX3D = currentMesh.position.x;
-        const newZ3D = currentMesh.position.z;
-        const newPctX = Math.max(0, Math.min(100, ((newX3D + 2.7) / 5.4) * 100));
-        const newPctY = Math.max(0, Math.min(100, ((newZ3D + 2.2) / 4.4) * 100));
+        
+        // 1. Boundary Clamping (Room floor boundaries: X: [-2.7, 2.7], Z: [-2.2, 2.2])
+        const minX = -2.7;
+        const maxX = 2.7;
+        const minZ = -2.2;
+        const maxZ = 2.2;
+
+        if (currentMesh.position.x < minX) currentMesh.position.x = minX;
+        if (currentMesh.position.x > maxX) currentMesh.position.x = maxX;
+        if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
+        if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
+
+        // Force height to stay on floor (0) unless wall-mounted decoration (1.5)
+        currentMesh.position.y = isWallMounted ? 1.5 : 0;
+
+        // 2. Rotation locks (keep furniture flat on the floor, no side tilting)
+        currentMesh.rotation.x = 0;
+        currentMesh.rotation.z = 0;
+
+        // 3. Scale Range limits [0.3, 3.0]
+        currentMesh.scale.x = Math.max(0.3, Math.min(3.0, currentMesh.scale.x));
+        currentMesh.scale.y = Math.max(0.3, Math.min(3.0, currentMesh.scale.y));
+        currentMesh.scale.z = Math.max(0.3, Math.min(3.0, currentMesh.scale.z));
+
+        // 4. Update real-time coordinates HUD label
+        const newPctX = Math.max(0, Math.min(100, ((currentMesh.position.x + 2.7) / 5.4) * 100));
+        const newPctY = Math.max(0, Math.min(100, ((currentMesh.position.z + 2.2) / 4.4) * 100));
         setCoords({ x: newPctX, y: newPctY });
       }
     };
@@ -142,7 +182,7 @@ export default function FurnitureItem({ instance }) {
       transformControls.removeEventListener("mouseUp", handleMouseUp);
       transformControls.removeEventListener("objectChange", handleObjectChange);
     };
-  }, [isSelected, controls, instance.instanceId, updateFurnitureTransform]);
+  }, [isSelected, controls, instance.instanceId, updateFurnitureTransform, isWallMounted]);
 
   // Fallback Mesh (renders if GLB is missing, loading, or fails)
   const fallbackMesh = (

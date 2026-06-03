@@ -5,14 +5,14 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import RoomFloor from "@/components/3d/RoomFloor";
 import RoomWalls from "@/components/3d/RoomWalls";
-import FurnitureItem from "@/components/3d/FurnitureItem";
+import FurnitureManager from "@/components/3d/FurnitureManager";
 import RoomLighting from "@/components/3d/RoomLighting";
 import { useDesign } from "@/context/DesignContext";
 
 /**
  * RoomScene — Renders the WebGL 3D Room Scene using React Three Fiber.
  *
- * Combines RoomFloor, RoomWalls, and FurnitureItem components inside a Canvas
+ * Combines RoomFloor, RoomWalls, and FurnitureManager components inside a Canvas
  * wrapper with interactive camera and lights.
  *
  * @param {object} props
@@ -52,13 +52,8 @@ export default function RoomScene({
           {/* Reusable Walls & Ceiling Component */}
           <RoomWalls wallColor={wallColor} />
 
-          {/* Render Furniture meshes */}
-          {furnitureItems.map((instance) => (
-            <FurnitureItem
-              key={instance.instanceId}
-              instance={instance}
-            />
-          ))}
+          {/* Centralized Furniture Coordinator Component */}
+          <FurnitureManager furnitureItems={furnitureItems} />
         </group>
 
         {/* ── Camera controls ── */}

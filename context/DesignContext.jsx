@@ -24,12 +24,14 @@ export function DesignProvider({ children }) {
       const newInstance = {
         ...item,
         instanceId: `${item.id}-${Date.now()}`,
+        type: item.category || "Furniture", // Explicitly store type
         position: { x: 50, y: 50 }, // default relative position coordinates (centered)
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
       };
       // Auto-select the newly added item
       setSelectedInstanceId(newInstance.instanceId);
+      console.log(`[FurnitureManager] Added item ${item.name} (type: ${newInstance.type}) to room`);
       return [...prev, newInstance];
     });
   };
@@ -50,10 +52,12 @@ export function DesignProvider({ children }) {
     if (selectedInstanceId === instanceId) {
       setSelectedInstanceId(null);
     }
+    console.log(`[FurnitureManager] Removed instance ${instanceId}`);
     setFurnitureItems((prev) => prev.filter((p) => p.instanceId !== instanceId));
   };
 
   const updateFurniturePosition = (instanceId, x, y) => {
+    console.log(`[FurnitureManager] Position updated for instance ${instanceId}: X: ${x.toFixed(1)}%, Y: ${y.toFixed(1)}%`);
     setFurnitureItems((prev) =>
       prev.map((p) =>
         p.instanceId === instanceId ? { ...p, position: { x, y } } : p
@@ -62,6 +66,16 @@ export function DesignProvider({ children }) {
   };
 
   const updateFurnitureTransform = (instanceId, { position, rotation, scale }) => {
+    if (position) {
+      console.log(`[FurnitureManager] Position updated for instance ${instanceId}: X: ${position.x.toFixed(1)}%, Z: ${position.y.toFixed(1)}%`);
+    }
+    if (rotation) {
+      console.log(`[FurnitureManager] Rotation updated for instance ${instanceId}: Y-angle: ${((rotation.y * 180) / Math.PI).toFixed(0)}°`);
+    }
+    if (scale) {
+      console.log(`[FurnitureManager] Scale updated for instance ${instanceId}: X: ${scale.x.toFixed(2)}, Y: ${scale.y.toFixed(2)}, Z: ${scale.z.toFixed(2)}`);
+    }
+
     setFurnitureItems((prev) =>
       prev.map((p) => {
         if (p.instanceId !== instanceId) return p;

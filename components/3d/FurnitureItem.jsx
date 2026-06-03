@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import { TransformControls, Html } from "@react-three/drei";
 import { useDesign } from "@/context/DesignContext";
@@ -45,6 +45,13 @@ export default function FurnitureItem({ instance }) {
   // Room floor size: Width 6 x Depth 5. Boundaries: X [-2.7, 2.7], Z [-2.2, 2.2]
   const pctX = position?.x ?? 50;
   const pctY = position?.y ?? 50;
+
+  const [coords, setCoords] = useState({ x: pctX, y: pctY });
+
+  useEffect(() => {
+    setCoords({ x: pctX, y: pctY });
+  }, [pctX, pctY]);
+
   const x3D = (pctX / 100) * 5.4 - 2.7;
   const z3D = (pctY / 100) * 4.4 - 2.2;
 
@@ -114,12 +121,26 @@ export default function FurnitureItem({ instance }) {
       }
     };
 
+    // Track real-time coordinates during active dragging
+    const handleObjectChange = () => {
+      if (meshRef.current) {
+        const currentMesh = meshRef.current;
+        const newX3D = currentMesh.position.x;
+        const newZ3D = currentMesh.position.z;
+        const newPctX = Math.max(0, Math.min(100, ((newX3D + 2.7) / 5.4) * 100));
+        const newPctY = Math.max(0, Math.min(100, ((newZ3D + 2.2) / 4.4) * 100));
+        setCoords({ x: newPctX, y: newPctY });
+      }
+    };
+
     transformControls.addEventListener("dragging-changed", handleDraggingChanged);
     transformControls.addEventListener("mouseUp", handleMouseUp);
+    transformControls.addEventListener("objectChange", handleObjectChange);
 
     return () => {
       transformControls.removeEventListener("dragging-changed", handleDraggingChanged);
       transformControls.removeEventListener("mouseUp", handleMouseUp);
+      transformControls.removeEventListener("objectChange", handleObjectChange);
     };
   }, [isSelected, controls, instance.instanceId, updateFurnitureTransform]);
 
@@ -176,6 +197,11 @@ export default function FurnitureItem({ instance }) {
           }`}>
             {name}
           </span>
+          {isSelected && (
+            <span className="whitespace-nowrap rounded-md bg-stone-900/90 border border-brand-500/30 px-1.5 py-0.5 text-[9px] font-bold text-brand-300 shadow mt-0.5 tracking-wide backdrop-blur-[2px]">
+              📍 X: {coords.x.toFixed(0)}% Z: {coords.y.toFixed(0)}%
+            </span>
+          )}
         </div>
       </Html>
     </group>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useDesign } from "@/context/DesignContext";
-import { furnitureCatalog, roomElementsCatalog } from "@/lib/data";
+import { furnitureCatalog, roomElementsCatalog, lightingCatalog } from "@/lib/data";
 import MaterialsStudio from "@/components/designer/MaterialsStudio";
 
 /**
@@ -22,7 +22,7 @@ export default function FurnitureLibrary({ roomSlug }) {
     setTransformMode,
   } = useDesign();
 
-  const [activeSection, setActiveSection] = useState("furniture"); // "furniture" | "elements" | "materials"
+  const [activeSection, setActiveSection] = useState("furniture"); // "furniture" | "elements" | "materials" | "lighting"
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All");
 
@@ -167,6 +167,9 @@ export default function FurnitureLibrary({ roomSlug }) {
 
   const currentHeightOffset = useMemo(() => {
     if (!selectedInstance) return 0;
+    if (selectedInstance.isLight) {
+      return selectedInstance.heightOffset ?? (selectedInstance.lightType === "ceiling" ? 2.95 : selectedInstance.lightType === "chandelier" ? 2.2 : selectedInstance.lightType === "wall" ? 1.6 : selectedInstance.lightType === "table-lamp" ? 0.7 : 0);
+    }
     const category = selectedInstance.category;
     const fallback = category === "Door" ? 0 : category === "Window" ? 1.0 : 1.2;
     return selectedInstance.heightOffset ?? fallback;
@@ -291,8 +294,186 @@ export default function FurnitureLibrary({ roomSlug }) {
             </div>
           </div>
 
-          {/* ── CONDITIONAL SLIDERS (Architectural vs Furniture) ── */}
-          {selectedInstance.isArchitectural ? (
+          {/* ── CONDITIONAL SLIDERS (Light vs Architectural vs Furniture) ── */}
+          {selectedInstance.isLight ? (
+            <>
+              {/* Slide along wall slider (only for Wall Sconce or LED Strip) */}
+              {(selectedInstance.lightType === "wall" || selectedInstance.lightType === "led-strip") && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="slide-slider" className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                      Slide along Wall
+                    </label>
+                    <span className="text-xs font-semibold text-stone-700">
+                      {currentSlideValue}%
+                    </span>
+                  </div>
+                  <input
+                    id="slide-slider"
+                    type="range"
+                    min="5"
+                    max="95"
+                    value={currentSlideValue}
+                    onChange={handleSlideChange}
+                    className="w-full accent-brand-600"
+                  />
+                </div>
+              )}
+
+              {/* Height Offset (Vertical Y Position) - Not for floor lamps (locked to 0) or ceiling lights (locked to 2.95) */}
+              {selectedInstance.lightType !== "ceiling" && selectedInstance.lightType !== "floor-lamp" && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="height-offset-slider" className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                      Height from Floor
+                    </label>
+                    <span className="text-xs font-semibold text-stone-700">
+                      {currentHeightOffset.toFixed(2)}m
+                    </span>
+                  </div>
+                  <input
+                    id="height-offset-slider"
+                    type="range"
+                    min={selectedInstance.lightType === "chandelier" ? "1.5" : "0.1"}
+                    max={selectedInstance.lightType === "chandelier" ? "2.8" : "2.6"}
+                    step="0.05"
+                    value={currentHeightOffset}
+                    onChange={handleHeightOffsetChange}
+                    className="w-full accent-brand-600"
+                  />
+                </div>
+              )}
+
+              {/* Light Fixture Controls (Color Temperature, Intensity, Range) */}
+              <div className="mt-4 border-t border-brand-100 pt-3.5 flex flex-col gap-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                  Light Output Controls
+                </p>
+
+                {/* Color presets / swatches */}
+                <div>
+                  <span className="text-[10px] font-semibold text-stone-500 block mb-1">
+                    Color Presets
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: "amber", label: "Cozy Warm", hex: "#ffedd5", temp: 3000 },
+                      { id: "daylight", label: "Daylight", hex: "#faf8f6", temp: 5000 },
+                      { id: "pink", label: "Soft Pink", hex: "#fce7f3", temp: null },
+                      { id: "cyber", label: "Cyber Pink", hex: "#ec4899", temp: null },
+                      { id: "blue", label: "Electric Blue", hex: "#3b82f6", temp: null },
+                      { id: "green", label: "Emerald", hex: "#10b981", temp: null },
+                    ].map((swatch) => {
+                      const settings = selectedInstance.lightSettings || {};
+                      const isSel = swatch.temp 
+                        ? settings.temperature === swatch.temp 
+                        : (settings.color === swatch.hex && !settings.temperature);
+                      return (
+                        <button
+                          key={swatch.id}
+                          title={swatch.label}
+                          onClick={() => {
+                            updateFurnitureTransform(selectedInstance.instanceId, {
+                              lightSettings: {
+                                temperature: swatch.temp,
+                                color: swatch.hex,
+                              }
+                            });
+                          }}
+                          className={`h-6 w-6 rounded-full border transition-all duration-150 relative ${
+                            isSel ? "border-brand-500 scale-110 ring-2 ring-brand-200 shadow-sm" : "border-stone-300 hover:scale-105"
+                          }`}
+                          style={{ backgroundColor: swatch.hex }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Warmth Slider */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-semibold text-stone-500">
+                      Warm/Cool Temperature
+                    </span>
+                    <span className="text-[10px] font-bold text-stone-600">
+                      {selectedInstance.lightSettings?.temperature ? `${selectedInstance.lightSettings.temperature}K` : "Custom"}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="2000"
+                    max="8000"
+                    step="250"
+                    value={selectedInstance.lightSettings?.temperature || 4000}
+                    onChange={(e) => {
+                      updateFurnitureTransform(selectedInstance.instanceId, {
+                        lightSettings: {
+                          temperature: parseInt(e.target.value),
+                          color: null, // reset custom solid color
+                        }
+                      });
+                    }}
+                    className="w-full accent-brand-600 h-1"
+                  />
+                </div>
+
+                {/* Intensity Slider */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-semibold text-stone-500">
+                      Intensity / Brightness
+                    </span>
+                    <span className="text-[10px] font-bold text-stone-600">
+                      {Math.round((selectedInstance.lightSettings?.intensity ?? 1.5) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="4.0"
+                    step="0.1"
+                    value={selectedInstance.lightSettings?.intensity ?? 1.5}
+                    onChange={(e) => {
+                      updateFurnitureTransform(selectedInstance.instanceId, {
+                        lightSettings: {
+                          intensity: parseFloat(e.target.value)
+                        }
+                      });
+                    }}
+                    className="w-full accent-brand-600 h-1"
+                  />
+                </div>
+
+                {/* Range Slider */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-semibold text-stone-500">
+                      Light Range Coverage
+                    </span>
+                    <span className="text-[10px] font-bold text-stone-600">
+                      {(selectedInstance.lightSettings?.range ?? 5).toFixed(1)}m
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="10.0"
+                    step="0.5"
+                    value={selectedInstance.lightSettings?.range ?? 5}
+                    onChange={(e) => {
+                      updateFurnitureTransform(selectedInstance.instanceId, {
+                        lightSettings: {
+                          range: parseFloat(e.target.value)
+                        }
+                      });
+                    }}
+                    className="w-full accent-brand-600 h-1"
+                  />
+                </div>
+              </div>
+            </>
+          ) : selectedInstance.isArchitectural ? (
             <>
               {/* Slide along wall slider */}
               <div className="mt-4">
@@ -673,7 +854,7 @@ export default function FurnitureLibrary({ roomSlug }) {
         </div>
       )}
 
-      {/* ── 2. SECTION SEPARATOR TABS (Furniture vs Elements vs Materials) ── */}
+      {/* ── 2. SECTION SEPARATOR TABS (Furniture vs Elements vs Lighting vs Materials) ── */}
       <div className="flex rounded-xl bg-stone-100 p-1 border border-stone-200/50">
         <button
           type="button"
@@ -706,6 +887,20 @@ export default function FurnitureLibrary({ roomSlug }) {
         <button
           type="button"
           onClick={() => {
+            setActiveSection("lighting");
+            setSearchQuery("");
+          }}
+          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition-all duration-150 ${
+            activeSection === "lighting"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-500 hover:text-stone-900"
+          }`}
+        >
+          💡 Lighting
+        </button>
+        <button
+          type="button"
+          onClick={() => {
             setActiveSection("materials");
             setSearchQuery("");
           }}
@@ -722,6 +917,8 @@ export default function FurnitureLibrary({ roomSlug }) {
       {/* ── 3. CATALOG SECTION ── */}
       {activeSection === "materials" ? (
         <MaterialsStudio />
+      ) : activeSection === "lighting" ? (
+        <LightingStudioPanel />
       ) : (
         <div className="flex flex-col gap-3">
           {/* Title / Description */}
@@ -841,6 +1038,161 @@ export default function FurnitureLibrary({ roomSlug }) {
         )}
         </div>
       )}
+    </div>
+  );
+}
+
+function LightingStudioPanel() {
+  const { globalLighting, updateGlobalLighting, addFurnitureItem } = useDesign();
+
+  return (
+    <div className="flex flex-col gap-6 px-1.5 py-1">
+      {/* Global Lighting Studio */}
+      <div className="border-b border-stone-100 pb-5">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-stone-700 mb-3.5">
+          Global Environment
+        </h4>
+
+        {/* Ambient brightness slider */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">
+              Ambient Fill Brightness
+            </span>
+            <span className="text-xs font-bold text-stone-700">
+              {Math.round(globalLighting.ambientIntensity * 100)}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min="0.1"
+            max="1.2"
+            step="0.05"
+            value={globalLighting.ambientIntensity}
+            onChange={(e) => updateGlobalLighting({ ambientIntensity: parseFloat(e.target.value) })}
+            className="w-full accent-brand-600 h-1 bg-stone-100 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        {/* Ambient Warmth temperature slider */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">
+              Ambient Warmth
+            </span>
+            <span className="text-xs font-bold text-stone-700">
+              {globalLighting.ambientTemp}K
+            </span>
+          </div>
+          <input
+            type="range"
+            min="2000"
+            max="8000"
+            step="250"
+            value={globalLighting.ambientTemp}
+            onChange={(e) => updateGlobalLighting({ ambientTemp: parseInt(e.target.value) })}
+            className="w-full accent-brand-600 h-1 bg-stone-100 rounded-lg appearance-none cursor-pointer"
+          />
+          {/* Temperature stops markers */}
+          <div className="flex justify-between text-[9px] font-semibold text-stone-400 mt-1">
+            <span>🕯️ Cozy (2K)</span>
+            <span>Neutral (4.5K)</span>
+            <span>❄️ Cool (8K)</span>
+          </div>
+        </div>
+
+        {/* Directional light intensity */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">
+              Sunlight Intensity
+            </span>
+            <span className="text-xs font-bold text-stone-700">
+              {Math.round(globalLighting.directionalIntensity * 100)}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min="0.0"
+            max="2.0"
+            step="0.05"
+            value={globalLighting.directionalIntensity}
+            onChange={(e) => updateGlobalLighting({ directionalIntensity: parseFloat(e.target.value) })}
+            className="w-full accent-brand-600 h-1 bg-stone-100 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        {/* Shadows toggle */}
+        <div className="flex items-center justify-between mt-2 rounded-xl border border-stone-200 p-3 bg-stone-50/50">
+          <div>
+            <p className="text-xs font-semibold text-stone-700">Casting Shadows</p>
+            <p className="text-[9px] text-stone-400 mt-0.5">Enables directional shadows for depth</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => updateGlobalLighting({ shadowsEnabled: !globalLighting.shadowsEnabled })}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              globalLighting.shadowsEnabled ? "bg-brand-600" : "bg-stone-300"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                globalLighting.shadowsEnabled ? "translate-x-4" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Add Lighting Fixtures Catalog */}
+      <div>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
+          Lighting Catalog
+        </h4>
+        <p className="text-xs text-stone-400 mb-3.5">
+          Select a light fixture to place inside the room box
+        </p>
+
+        <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+          {lightingCatalog.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => addFurnitureItem(item)}
+              className="group flex cursor-pointer items-center gap-3 rounded-xl border p-2.5 border-stone-200 bg-white hover:border-stone-300 hover:shadow-sm transition-all duration-200"
+            >
+              {/* Visual Icon */}
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-2xl shadow-sm border border-stone-100 transition-transform duration-200 group-hover:scale-105 bg-amber-50"
+              >
+                {item.icon}
+              </div>
+
+              {/* Info */}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold leading-tight text-stone-800">
+                  {item.name}
+                </p>
+                <p className="mt-0.5 text-[10px] text-stone-400 font-medium">
+                  {item.lightType === "ceiling" || item.lightType === "chandelier"
+                    ? "Ceiling Mounted"
+                    : item.lightType === "wall" || item.lightType === "led-strip"
+                    ? "Wall Snapped"
+                    : "Floor Stand"}
+                </p>
+              </div>
+
+              {/* Add Button */}
+              <div className="shrink-0 pl-1">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 hover:border-brand-400 hover:bg-brand-700 hover:text-white transition-all duration-150">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

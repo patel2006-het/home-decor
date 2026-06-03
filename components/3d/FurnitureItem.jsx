@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import { useThree } from "@react-three/fiber";
 import { TransformControls, Html } from "@react-three/drei";
 import { useDesign } from "@/context/DesignContext";
@@ -8,9 +6,18 @@ import FurnitureLoader from "@/components/3d/FurnitureLoader";
 import DoorModel from "@/components/3d/DoorModel";
 import WindowModel from "@/components/3d/WindowModel";
 import CurtainModel from "@/components/3d/CurtainModel";
+import { getKelvinColor } from "./RoomLighting";
+import {
+  CeilingLightModel,
+  ChandelierModel,
+  WallLightModel,
+  FloorLampModel,
+  TableLampModel,
+  LEDStripModel,
+} from "./LightModels";
 
 /**
- * FurnitureItem — Renders a placed furniture instance in 3D space.
+ * FurnitureItem — Renders a placed furniture or light instance in 3D space.
  * 
  * Supports interactive dragging (translating), rotation, and scaling using Drei's TransformControls.
  * Syncs changes back to DesignContext on drag completion.
@@ -44,6 +51,14 @@ export default function FurnitureItem({ instance }) {
 
   const isSelected = selectedInstanceId === instance.instanceId;
 
+  // Resolve light properties
+  const isLight = instance.isLight ?? false;
+  const lightSettings = instance.lightSettings || { color: "#ffedd5", intensity: 1.5, temperature: 3000, range: 5 };
+  
+  const lightColor = useMemo(() => {
+    return lightSettings.temperature ? getKelvinColor(lightSettings.temperature) : (lightSettings.color || "#ffedd5");
+  }, [lightSettings.color, lightSettings.temperature]);
+
   // 1. Resolve 3D Transform Properties (matching current room engine constraints)
   // Room floor size: Width 6 x Depth 5. Boundaries: X [-2.7, 2.7], Z [-2.2, 2.2]
   const pctX = position?.x ?? 50;
@@ -68,13 +83,14 @@ export default function FurnitureItem({ instance }) {
   else if (category === "Tables") d3D = 0.9;
   else if (category === "Storage") d3D = 0.5;
   else if (category === "Decor") d3D = 0.1;
+  else if (category === "Lighting") d3D = 0.3;
 
   const isWallMounted = category === "Decor" && (id.includes("mirror") || id.includes("cabinet"));
   
   // Architectural parameters
   const isArchitectural = instance.isArchitectural ?? false;
-  const heightOffset = instance.heightOffset ?? (category === "Door" ? 0 : category === "Window" ? 1.0 : 1.2);
-  const y3D = isArchitectural ? heightOffset : (isWallMounted ? 1.5 : 0);
+  const heightOffset = instance.heightOffset ?? (category === "Door" ? 0 : category === "Window" ? 1.0 : category === "Curtain" ? 1.2 : 0);
+  const y3D = (isArchitectural || isLight) ? heightOffset : (isWallMounted ? 1.5 : 0);
 
   // Resolve vectors
   const finalPosition = [x3D, y3D, z3D];
@@ -96,6 +112,15 @@ export default function FurnitureItem({ instance }) {
 
     // Helper to calculate closest wall snap and restrict Y & X/Z rotation/scale
     const applyArchitecturalSnapping = (mesh) => {
+      // Ceiling mounted light fixtures: free to slide horizontally, but Y height is locked
+      if (instance.lightType === "ceiling" || instance.lightType === "chandelier") {
+        mesh.position.x = Math.max(-2.7, Math.min(2.7, mesh.position.x));
+        mesh.position.z = Math.max(-2.2, Math.min(2.2, mesh.position.z));
+        mesh.position.y = instance.lightType === "ceiling" ? 2.95 : 2.2;
+        mesh.rotation.set(0, 0, 0);
+        return;
+      }
+
       // 4 Wall Planes boundaries:
       // Back wall: Z = -2.5, X in [-3, 3]
       // Front wall: Z = 2.5, X in [-3, 3]
@@ -133,6 +158,10 @@ export default function FurnitureItem({ instance }) {
         mesh.position.y = Math.max(0.3, Math.min(2.2, mesh.position.y)); // Windows float
       } else if (category === "Curtain") {
         mesh.position.y = Math.max(0.6, Math.min(2.6, mesh.position.y)); // Curtains hang
+      } else if (instance.lightType === "wall") {
+        mesh.position.y = Math.max(0.5, Math.min(2.5, mesh.position.y)); // Wall sconces float
+      } else if (instance.lightType === "led-strip") {
+        mesh.position.y = Math.max(0.01, Math.min(2.95, mesh.position.y)); // LED strip can run anywhere
       }
 
       // Force upright X/Z rotation
@@ -150,7 +179,7 @@ export default function FurnitureItem({ instance }) {
       if (meshRef.current) {
         const currentMesh = meshRef.current;
         
-        if (isArchitectural) {
+        if (isArchitectural || (isLight && instance.lightType !== "floor-lamp" && instance.lightType !== "table-lamp")) {
           applyArchitecturalSnapping(currentMesh);
         } else {
           // Clamp boundary limits
@@ -164,7 +193,7 @@ export default function FurnitureItem({ instance }) {
           if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
           if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
 
-          currentMesh.position.y = isWallMounted ? 1.5 : 0;
+          currentMesh.position.y = isLight ? (instance.heightOffset ?? 0) : (isWallMounted ? 1.5 : 0);
           currentMesh.rotation.x = 0;
           currentMesh.rotation.z = 0;
 
@@ -177,7 +206,7 @@ export default function FurnitureItem({ instance }) {
         const newPctX = Math.max(0, Math.min(100, ((currentMesh.position.x + 2.7) / 5.4) * 100));
         const newPctY = Math.max(0, Math.min(100, ((currentMesh.position.z + 2.2) / 4.4) * 100));
 
-        // Extract rotation (Y rotation is primary for floor objects)
+        // Extract rotation
         const newRot = {
           x: currentMesh.rotation.x,
           y: currentMesh.rotation.y,
@@ -197,7 +226,7 @@ export default function FurnitureItem({ instance }) {
           scale: newScale,
         };
 
-        if (isArchitectural) {
+        if (isArchitectural || isLight) {
           updateData.heightOffset = currentMesh.position.y;
         }
 
@@ -211,10 +240,10 @@ export default function FurnitureItem({ instance }) {
       if (meshRef.current) {
         const currentMesh = meshRef.current;
         
-        if (isArchitectural) {
+        if (isArchitectural || (isLight && instance.lightType !== "floor-lamp" && instance.lightType !== "table-lamp")) {
           applyArchitecturalSnapping(currentMesh);
         } else {
-          // 1. Boundary Clamping (Room floor boundaries: X: [-2.7, 2.7], Z: [-2.2, 2.2])
+          // 1. Boundary Clamping
           const minX = -2.7;
           const maxX = 2.7;
           const minZ = -2.2;
@@ -225,14 +254,14 @@ export default function FurnitureItem({ instance }) {
           if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
           if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
 
-          // Force height to stay on floor (0) unless wall-mounted decoration (1.5)
-          currentMesh.position.y = isWallMounted ? 1.5 : 0;
+          // Force height
+          currentMesh.position.y = isLight ? (instance.heightOffset ?? 0) : (isWallMounted ? 1.5 : 0);
 
-          // 2. Rotation locks (keep furniture flat on the floor, no side tilting)
+          // 2. Rotation locks
           currentMesh.rotation.x = 0;
           currentMesh.rotation.z = 0;
 
-          // 3. Scale Range limits [0.3, 3.0]
+          // 3. Scale Range limits
           currentMesh.scale.x = Math.max(0.3, Math.min(3.0, currentMesh.scale.x));
           currentMesh.scale.y = Math.max(0.3, Math.min(3.0, currentMesh.scale.y));
           currentMesh.scale.z = Math.max(0.3, Math.min(3.0, currentMesh.scale.z));
@@ -254,7 +283,7 @@ export default function FurnitureItem({ instance }) {
       transformControls.removeEventListener("mouseUp", handleMouseUp);
       transformControls.removeEventListener("objectChange", handleObjectChange);
     };
-  }, [isSelected, controls, instance.instanceId, updateFurnitureTransform, isWallMounted, isArchitectural, category]);
+  }, [isSelected, controls, instance.instanceId, updateFurnitureTransform, isWallMounted, isArchitectural, category, isLight, instance.lightType, instance.heightOffset]);
 
   // Fallback Mesh (renders if GLB is missing, loading, or fails)
   const fallbackMesh = (
@@ -286,7 +315,94 @@ export default function FurnitureItem({ instance }) {
         setSelectedInstanceId(instance.instanceId);
       }}
     >
-      {isArchitectural ? (
+      {isLight ? (
+        <group>
+          {instance.lightType === "ceiling" && (
+            <>
+              <CeilingLightModel glowColor={lightColor} />
+              <pointLight
+                castShadow
+                color={lightColor}
+                intensity={lightSettings.intensity * 1.5}
+                distance={lightSettings.range || 5}
+                decay={1.8}
+                position={[0, -0.05, 0]}
+              />
+            </>
+          )}
+          {instance.lightType === "chandelier" && (
+            <>
+              <ChandelierModel glowColor={lightColor} />
+              <pointLight
+                castShadow
+                color={lightColor}
+                intensity={lightSettings.intensity * 1.2}
+                distance={lightSettings.range || 6}
+                decay={1.8}
+                position={[0, 0, 0]}
+              />
+            </>
+          )}
+          {instance.lightType === "wall" && (
+            <>
+              <WallLightModel glowColor={lightColor} />
+              <pointLight
+                castShadow
+                color={lightColor}
+                intensity={lightSettings.intensity}
+                distance={lightSettings.range || 4}
+                decay={1.8}
+                position={[0, 0, 0.05]}
+              />
+            </>
+          )}
+          {instance.lightType === "floor-lamp" && (
+            <>
+              <FloorLampModel glowColor={lightColor} />
+              <pointLight
+                castShadow
+                color={lightColor}
+                intensity={lightSettings.intensity}
+                distance={lightSettings.range || 5}
+                decay={1.8}
+                position={[0.1, 1.25, 0]}
+              />
+            </>
+          )}
+          {instance.lightType === "table-lamp" && (
+            <>
+              <TableLampModel glowColor={lightColor} />
+              <pointLight
+                castShadow
+                color={lightColor}
+                intensity={lightSettings.intensity}
+                distance={lightSettings.range || 4}
+                decay={1.8}
+                position={[0, 0.35, 0]}
+              />
+            </>
+          )}
+          {instance.lightType === "led-strip" && (
+            <>
+              <LEDStripModel glowColor={lightColor} />
+              <pointLight
+                color={lightColor}
+                intensity={lightSettings.intensity * 0.8}
+                distance={lightSettings.range || 3}
+                decay={1.8}
+                position={[-0.3, 0, 0.02]}
+              />
+              <pointLight
+                color={lightColor}
+                intensity={lightSettings.intensity * 0.8}
+                distance={lightSettings.range || 3}
+                decay={1.8}
+                position={[0.3, 0, 0.02]}
+              />
+            </>
+          )}
+        </group>
+      ) : isArchitectural ? (
         <group>
           {category === "Door" && <DoorModel instance={instance} />}
           {category === "Window" && <WindowModel instance={instance} />}

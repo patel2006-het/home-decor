@@ -17,13 +17,31 @@ export function DesignProvider({ children }) {
     ceiling: { type: "standard", color: "#FAF8F5" },
   };
 
+  const defaultGlobalLighting = {
+    ambientIntensity: 0.55,
+    ambientColor: "#ffffff",
+    ambientTemp: 4000,
+    directionalIntensity: 1.0,
+    shadowsEnabled: true,
+  };
+
   const [roomMaterials, setRoomMaterials] = useState(defaultMaterials);
+  const [globalLighting, setGlobalLighting] = useState(defaultGlobalLighting);
 
   const handleSetSelectedRoom = (room) => {
     setSelectedRoom(room);
     setFurnitureItems([]); // Reset furniture items when room changes
     setSelectedInstanceId(null); // Clear selected item
     setRoomMaterials(defaultMaterials); // Reset materials
+    setGlobalLighting(defaultGlobalLighting); // Reset global lighting
+  };
+
+  const updateGlobalLighting = (updates) => {
+    setGlobalLighting((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+    console.log("[LightingStudio] Updated global lighting settings:", updates);
   };
 
   const updateRoomMaterials = (target, materialData) => {
@@ -39,8 +57,8 @@ export function DesignProvider({ children }) {
 
   const addFurnitureItem = (item) => {
     setFurnitureItems((prev) => {
-      // Prevent adding the same furniture item type twice, but allow multiple doors, windows, and curtains
-      if (!item.isArchitectural && prev.some((p) => p.id === item.id)) return prev;
+      // Prevent adding the same furniture item type twice, but allow multiple doors, windows, curtains, and lights
+      if (!item.isArchitectural && !item.isLight && prev.some((p) => p.id === item.id)) return prev;
       const newInstance = {
         ...item,
         instanceId: `${item.id}-${Date.now()}`,
@@ -49,6 +67,14 @@ export function DesignProvider({ children }) {
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
       };
+      if (item.isLight) {
+        newInstance.lightSettings = {
+          color: "#ffedd5", // default cozy warm amber light
+          intensity: 1.5,
+          temperature: 3000, // cozy warm 3000 Kelvin
+          range: 5,
+        };
+      }
       // Auto-select the newly added item
       setSelectedInstanceId(newInstance.instanceId);
       console.log(`[FurnitureManager] Added item ${item.name} (type: ${newInstance.type}) to room`);
@@ -86,7 +112,7 @@ export function DesignProvider({ children }) {
   };
 
   const updateFurnitureTransform = (instanceId, updates) => {
-    const { position, rotation, scale, heightOffset, material } = updates;
+    const { position, rotation, scale, heightOffset, material, lightSettings } = updates;
     if (position) {
       console.log(`[FurnitureManager] Position updated for instance ${instanceId}: X: ${position.x.toFixed(1)}%, Z: ${position.y.toFixed(1)}%`);
     }
@@ -107,6 +133,7 @@ export function DesignProvider({ children }) {
           scale: scale !== undefined ? scale : p.scale,
           heightOffset: heightOffset !== undefined ? heightOffset : p.heightOffset,
           material: material !== undefined ? material : p.material,
+          lightSettings: lightSettings !== undefined ? { ...p.lightSettings, ...lightSettings } : p.lightSettings,
         };
       })
     );
@@ -151,6 +178,8 @@ export function DesignProvider({ children }) {
         setTransformMode,
         roomMaterials,
         updateRoomMaterials,
+        globalLighting,
+        updateGlobalLighting,
         saveDesign,
         loadDesign,
       }}

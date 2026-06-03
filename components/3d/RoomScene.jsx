@@ -5,13 +5,14 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import RoomFloor from "@/components/3d/RoomFloor";
 import RoomWalls from "@/components/3d/RoomWalls";
-import FurnitureModel3D from "@/components/3d/FurnitureModel3D";
+import FurnitureItem from "@/components/3d/FurnitureItem";
 import RoomLighting from "@/components/3d/RoomLighting";
+import { useDesign } from "@/context/DesignContext";
 
 /**
  * RoomScene — Renders the WebGL 3D Room Scene using React Three Fiber.
  *
- * Combines RoomFloor, RoomWalls, and FurnitureModel3D components inside a Canvas
+ * Combines RoomFloor, RoomWalls, and FurnitureItem components inside a Canvas
  * wrapper with interactive camera and lights.
  *
  * @param {object} props
@@ -24,18 +25,26 @@ export default function RoomScene({
   selectedFloor,
   furnitureItems = [],
 }) {
+  const { setSelectedInstanceId } = useDesign();
+
   return (
     <div className="h-full w-full bg-stone-100">
       <Canvas
         shadows
         camera={{ position: [0, 2.5, 7.5], fov: 45 }}
         style={{ pointerEvents: "auto" }}
+        // Deselect if clicking completely off the room diorama
+        onPointerMissed={() => setSelectedInstanceId(null)}
       >
         {/* Reusable Scene Lighting */}
         <RoomLighting />
 
         {/* ── Room Diorama Group ── */}
-        <group position={[0, -0.7, 0]}>
+        <group
+          position={[0, -0.7, 0]}
+          // Deselect when clicking on walls or floor
+          onClick={() => setSelectedInstanceId(null)}
+        >
           
           {/* Reusable Floor Component */}
           <RoomFloor selectedFloor={selectedFloor} />
@@ -45,7 +54,7 @@ export default function RoomScene({
 
           {/* Render Furniture meshes */}
           {furnitureItems.map((instance) => (
-            <FurnitureModel3D
+            <FurnitureItem
               key={instance.instanceId}
               instance={instance}
             />

@@ -1,6 +1,6 @@
 import ColorSwatch from "@/components/designer/ColorSwatch";
 import FloorOption from "@/components/designer/FloorOption";
-import FurnitureCatalog from "@/components/designer/FurnitureCatalog";
+import FurnitureLibrary from "@/components/3d/FurnitureLibrary";
 import { wallColors, floorTypes } from "@/lib/data";
 import Image from "next/image";
 
@@ -140,22 +140,9 @@ export default function DesignerSidebar({
           </div>
         </section>
 
-        {/* ── Furniture Catalog ── */}
+        {/* ── Furniture Library ── */}
         <section className="pb-6">
-          <div className="border-b border-stone-100 px-5 py-4">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">
-              Furniture
-            </h3>
-            <p className="mt-0.5 text-xs text-stone-400">
-              Click to add to your room
-            </p>
-          </div>
-          <FurnitureCatalog
-            roomSlug={room.slug}
-            placedItems={placedFurniture}
-            onAdd={onFurnitureAdd}
-            onRemove={onFurnitureRemove}
-          />
+          <FurnitureLibrary roomSlug={room.slug} />
         </section>
       </div>
     </aside>

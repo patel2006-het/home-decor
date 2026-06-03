@@ -8,32 +8,48 @@ export function DesignProvider({ children }) {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [furnitureItems, setFurnitureItems] = useState([]);
+  const [selectedInstanceId, setSelectedInstanceId] = useState(null);
+  const [transformMode, setTransformMode] = useState("translate");
 
   const handleSetSelectedRoom = (room) => {
     setSelectedRoom(room);
     setFurnitureItems([]); // Reset furniture items when room changes
+    setSelectedInstanceId(null); // Clear selected item
   };
 
   const addFurnitureItem = (item) => {
     setFurnitureItems((prev) => {
       // Prevent adding the same item type twice in the current step
       if (prev.some((p) => p.id === item.id)) return prev;
-      return [
-        ...prev,
-        {
-          ...item,
-          instanceId: `${item.id}-${Date.now()}`,
-          position: { x: 50, y: 50 }, // default relative position coordinates (centered)
-        },
-      ];
+      const newInstance = {
+        ...item,
+        instanceId: `${item.id}-${Date.now()}`,
+        position: { x: 50, y: 50 }, // default relative position coordinates (centered)
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 },
+      };
+      // Auto-select the newly added item
+      setSelectedInstanceId(newInstance.instanceId);
+      return [...prev, newInstance];
     });
   };
 
   const removeFurnitureItemById = (itemId) => {
-    setFurnitureItems((prev) => prev.filter((p) => p.id !== itemId));
+    setFurnitureItems((prev) => {
+      const remaining = prev.filter((p) => p.id !== itemId);
+      // If the currently selected item is removed, deselect it
+      const isSelectedRemoved = prev.find((p) => p.id === itemId)?.instanceId === selectedInstanceId;
+      if (isSelectedRemoved) {
+        setSelectedInstanceId(null);
+      }
+      return remaining;
+    });
   };
 
   const removeFurnitureItemByInstance = (instanceId) => {
+    if (selectedInstanceId === instanceId) {
+      setSelectedInstanceId(null);
+    }
     setFurnitureItems((prev) => prev.filter((p) => p.instanceId !== instanceId));
   };
 
@@ -42,6 +58,20 @@ export function DesignProvider({ children }) {
       prev.map((p) =>
         p.instanceId === instanceId ? { ...p, position: { x, y } } : p
       )
+    );
+  };
+
+  const updateFurnitureTransform = (instanceId, { position, rotation, scale }) => {
+    setFurnitureItems((prev) =>
+      prev.map((p) => {
+        if (p.instanceId !== instanceId) return p;
+        return {
+          ...p,
+          position: position !== undefined ? position : p.position,
+          rotation: rotation !== undefined ? rotation : p.rotation,
+          scale: scale !== undefined ? scale : p.scale,
+        };
+      })
     );
   };
 
@@ -60,6 +90,7 @@ export function DesignProvider({ children }) {
     if (designData.room) setSelectedRoom(designData.room);
     if (designData.style) setSelectedStyle(designData.style);
     if (designData.furniture) setFurnitureItems(designData.furniture);
+    setSelectedInstanceId(null);
     console.log("Design loaded successfully.");
   };
 
@@ -76,6 +107,11 @@ export function DesignProvider({ children }) {
         removeFurnitureItemById,
         removeFurnitureItemByInstance,
         updateFurniturePosition,
+        updateFurnitureTransform,
+        selectedInstanceId,
+        setSelectedInstanceId,
+        transformMode,
+        setTransformMode,
         saveDesign,
         loadDesign,
       }}

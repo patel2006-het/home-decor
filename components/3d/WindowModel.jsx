@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 
 /**
@@ -19,11 +17,15 @@ export default function WindowModel({
   glassColor = "#bae6fd",
   glassOpacity = 0.4,
 }) {
-  const { width, height } = instance;
+  const { width, height, material } = instance;
 
   const w3D = (width ?? 120) / 100;
   const h3D = (height ?? 150) / 100;
   const frameThickness = 0.05;
+
+  const activeFrameColor = material?.frameColor || frameColor || "#ffffff";
+  const activeGlassColor = material?.glassColor || glassColor || "#bae6fd";
+  const activeGlassOpacity = material?.glassOpacity ?? glassOpacity ?? 0.4;
 
   return (
     <group name="WindowModel">
@@ -31,11 +33,11 @@ export default function WindowModel({
       <mesh position={[0, h3D / 2, 0]}>
         <planeGeometry args={[w3D, h3D]} />
         <meshStandardMaterial
-          color={glassColor}
+          color={activeGlassColor}
           roughness={0.1}
           metalness={0.9}
           transparent
-          opacity={glassOpacity}
+          opacity={activeGlassOpacity}
         />
       </mesh>
 
@@ -43,38 +45,38 @@ export default function WindowModel({
       {/* Left Trim */}
       <mesh castShadow receiveShadow position={[-w3D / 2 - frameThickness / 2, h3D / 2, 0]}>
         <boxGeometry args={[frameThickness, h3D + frameThickness * 2, 0.08]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
+        <meshStandardMaterial color={activeFrameColor} roughness={0.7} />
       </mesh>
 
       {/* Right Trim */}
       <mesh castShadow receiveShadow position={[w3D / 2 + frameThickness / 2, h3D / 2, 0]}>
         <boxGeometry args={[frameThickness, h3D + frameThickness * 2, 0.08]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
+        <meshStandardMaterial color={activeFrameColor} roughness={0.7} />
       </mesh>
 
       {/* Bottom Trim */}
       <mesh castShadow receiveShadow position={[0, -frameThickness / 2, 0]}>
         <boxGeometry args={[w3D, frameThickness, 0.12]} /> {/* thicker bottom sill */}
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
+        <meshStandardMaterial color={activeFrameColor} roughness={0.7} />
       </mesh>
 
       {/* Top Trim */}
       <mesh castShadow receiveShadow position={[0, h3D + frameThickness / 2, 0]}>
         <boxGeometry args={[w3D, frameThickness, 0.08]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
+        <meshStandardMaterial color={activeFrameColor} roughness={0.7} />
       </mesh>
 
       {/* 3. Window Mullions (Inner Dividers - 4 quadrants) */}
       {/* Vertical divider */}
       <mesh castShadow position={[0, h3D / 2, 0.01]}>
         <boxGeometry args={[0.03, h3D, 0.04]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
+        <meshStandardMaterial color={activeFrameColor} roughness={0.7} />
       </mesh>
 
       {/* Horizontal divider */}
       <mesh castShadow position={[0, h3D / 2, 0.01]}>
         <boxGeometry args={[w3D, 0.03, 0.04]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
+        <meshStandardMaterial color={activeFrameColor} roughness={0.7} />
       </mesh>
     </group>
   );

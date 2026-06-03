@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { wallColors, floorTypes } from "@/lib/data";
+import { useState } from "react";
 import DesignerSidebar from "@/components/designer/DesignerSidebar";
 import DesignerPreview from "@/components/designer/DesignerPreview";
 import { useDesign } from "@/context/DesignContext";
@@ -10,14 +9,8 @@ import { useDesign } from "@/context/DesignContext";
  * DesignerClient — The single "use client" boundary for the /designer page.
  *
  * Owns all interactive state:
- *  - selectedColor    (wall color)
- *  - selectedFloor    (floor type)
- *  - furnitureItems   (placed furniture instances — Step 5)
+ *  - furnitureItems   (placed furniture instances)
  *  - sidebarOpen      (mobile sidebar toggle)
- *
- * Furniture state shape:
- *  { instanceId: string, id: string, name, icon, color, width, height }
- *  instanceId is unique per placement (same item can be added multiple times in Step 6).
  *
  * @param {{ slug, name, image, description }} room
  * @param {{ slug, name, image, description }} style
@@ -27,17 +20,12 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
     selectedRoom,
     selectedStyle,
     furnitureItems,
-    addFurnitureItem,
-    removeFurnitureItemById,
-    removeFurnitureItemByInstance,
   } = useDesign();
 
   const room = selectedRoom || initialRoom;
   const style = selectedStyle || initialStyle;
 
-  const [selectedColor, setSelectedColor]   = useState(wallColors[0]);
-  const [selectedFloor, setSelectedFloor]   = useState(floorTypes[0]);
-  const [sidebarOpen, setSidebarOpen]       = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-[calc(100vh-65px)] flex-col overflow-hidden lg:flex-row">
@@ -73,25 +61,15 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
         <DesignerSidebar
           room={room}
           style={style}
-          selectedColor={selectedColor}
-          selectedFloor={selectedFloor}
-          onColorChange={setSelectedColor}
-          onFloorChange={setSelectedFloor}
-          placedFurniture={furnitureItems}
-          onFurnitureAdd={addFurnitureItem}
-          onFurnitureRemove={removeFurnitureItemById}
         />
       </div>
 
       {/* ── Preview canvas ── */}
       <main className="flex flex-1 flex-col overflow-hidden">
         <DesignerPreview
-          wallColor={selectedColor.hex}
-          selectedFloor={selectedFloor}
           roomName={room.name}
           styleName={style.name}
           furnitureItems={furnitureItems}
-          onFurnitureRemove={removeFurnitureItemByInstance}
         />
       </main>
     </div>

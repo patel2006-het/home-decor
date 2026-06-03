@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 
 /**
@@ -18,11 +16,13 @@ export default function CurtainModel({
   rodColor = "#cfd8dc",
   fabricColor,
 }) {
-  const { color, width, height } = instance;
+  const { color, width, height, material } = instance;
 
   const w3D = (width ?? 140) / 100;
   const h3D = (height ?? 160) / 100;
-  const activeFabricColor = fabricColor || color || "#ECEFF1";
+
+  const activeFabricColor = material?.fabricColor || fabricColor || color || "#ECEFF1";
+  const activeRodColor = material?.rodColor || rodColor || "#cfd8dc";
 
   // Create fabric folds programmatically to achieve a premium "wavy" look
   const foldCount = 6;
@@ -53,17 +53,17 @@ export default function CurtainModel({
       {/* 1. Curtain Rod (Extend slightly wider than fabric width) */}
       <mesh castShadow position={[0, h3D, 0.06]}>
         <cylinderGeometry args={[0.015, 0.015, w3D + 0.2]} rotation={[0, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={rodColor} metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color={activeRodColor} metalness={0.8} roughness={0.2} />
       </mesh>
 
       {/* Wall Brackets (Left/Right ends of rod) */}
       <mesh castShadow position={[-w3D / 2 - 0.08, h3D, 0.03]}>
         <cylinderGeometry args={[0.012, 0.012, 0.06]} rotation={[Math.PI / 2, 0, 0]} />
-        <meshStandardMaterial color={rodColor} metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color={activeRodColor} metalness={0.8} roughness={0.2} />
       </mesh>
       <mesh castShadow position={[w3D / 2 + 0.08, h3D, 0.03]}>
         <cylinderGeometry args={[0.012, 0.012, 0.06]} rotation={[Math.PI / 2, 0, 0]} />
-        <meshStandardMaterial color={rodColor} metalness={0.8} roughness={0.2} />
+        <meshStandardMaterial color={activeRodColor} metalness={0.8} roughness={0.2} />
       </mesh>
 
       {/* 2. Left Curtain Panel Folds */}

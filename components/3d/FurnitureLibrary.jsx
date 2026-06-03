@@ -1,8 +1,7 @@
-"use client";
-
 import React, { useState, useMemo } from "react";
 import { useDesign } from "@/context/DesignContext";
 import { furnitureCatalog, roomElementsCatalog } from "@/lib/data";
+import MaterialsStudio from "@/components/designer/MaterialsStudio";
 
 /**
  * FurnitureLibrary — Premium UI sidebar panel.
@@ -23,7 +22,7 @@ export default function FurnitureLibrary({ roomSlug }) {
     setTransformMode,
   } = useDesign();
 
-  const [activeSection, setActiveSection] = useState("furniture"); // "furniture" | "elements"
+  const [activeSection, setActiveSection] = useState("furniture"); // "furniture" | "elements" | "materials"
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All");
 
@@ -431,21 +430,250 @@ export default function FurnitureLibrary({ roomSlug }) {
             </>
           )}
 
-          {/* Delete Action Button */}
-          <button
-            type="button"
-            onClick={() => removeFurnitureItemByInstance(selectedInstance.instanceId)}
-            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
-          >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Remove from Room
-          </button>
+            {/* ── FINISHES & MATERIALS FOR ARCHITECTURAL ELEMENTS ── */}
+            <div className="mt-4 border-t border-brand-100 pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-2">
+                Finishes & Materials
+              </p>
+
+              {selectedInstance.category === "Door" && (
+                <div className="flex flex-col gap-3">
+                  {/* Door Panel Finish */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-stone-500 block mb-1">
+                      Door Panel Finish
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: "oak-light", label: "Light Oak", hex: "#E5C594", type: "wood" },
+                        { id: "oak-nat", label: "Natural Oak", hex: "#C4A882", type: "wood" },
+                        { id: "walnut", label: "Walnut", hex: "#5C3D2E", type: "wood" },
+                        { id: "ivory", label: "Warm Ivory", hex: "#F5F0E8", type: "solid" },
+                        { id: "black", label: "Charcoal", hex: "#2B2B2B", type: "solid" },
+                      ].map((swatch) => {
+                        const isSel = (selectedInstance.material?.panelColor || selectedInstance.color || "#8D6E63") === swatch.hex;
+                        return (
+                          <button
+                            key={swatch.id}
+                            title={swatch.label}
+                            onClick={() => {
+                              updateFurnitureTransform(selectedInstance.instanceId, {
+                                material: {
+                                  ...selectedInstance.material,
+                                  type: swatch.type,
+                                  panelColor: swatch.hex,
+                                }
+                              });
+                            }}
+                            className={`h-6 w-6 rounded-full border transition-all duration-150 relative overflow-hidden ${
+                              isSel ? "border-brand-500 scale-110 ring-2 ring-brand-200" : "border-stone-300 hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: swatch.hex }}
+                          >
+                            {swatch.type === "wood" && (
+                              <div className="absolute inset-0 opacity-15 bg-black"
+                                   style={{ backgroundImage: `repeating-linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 6px)` }}
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Door Frame Finish */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-stone-500 block mb-1">
+                      Door Frame Finish
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: "white", label: "White", hex: "#FAF8F5" },
+                        { id: "black", label: "Black", hex: "#1A1A1A" },
+                        { id: "oak", label: "Oak", hex: "#C4A882" },
+                      ].map((swatch) => {
+                        const isSel = (selectedInstance.material?.frameColor || "#FAF8F5") === swatch.hex;
+                        return (
+                          <button
+                            key={swatch.id}
+                            title={swatch.label}
+                            onClick={() => {
+                              updateFurnitureTransform(selectedInstance.instanceId, {
+                                material: {
+                                  ...selectedInstance.material,
+                                  frameColor: swatch.hex,
+                                }
+                              });
+                            }}
+                            className={`h-6 w-6 rounded-full border transition-all duration-150 ${
+                              isSel ? "border-brand-500 scale-110 ring-2 ring-brand-200" : "border-stone-300 hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: swatch.hex }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedInstance.category === "Window" && (
+                <div className="flex flex-col gap-3">
+                  {/* Window Frame Finish */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-stone-500 block mb-1">
+                      Frame Finish
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: "white", label: "White", hex: "#ffffff" },
+                        { id: "black", label: "Black", hex: "#1A1A1A" },
+                        { id: "bronze", label: "Bronze", hex: "#4E443C" },
+                        { id: "oak", label: "Oak", hex: "#C4A882" },
+                      ].map((swatch) => {
+                        const isSel = (selectedInstance.material?.frameColor || "#ffffff") === swatch.hex;
+                        return (
+                          <button
+                            key={swatch.id}
+                            title={swatch.label}
+                            onClick={() => {
+                              updateFurnitureTransform(selectedInstance.instanceId, {
+                                material: {
+                                  ...selectedInstance.material,
+                                  frameColor: swatch.hex,
+                                }
+                              });
+                            }}
+                            className={`h-6 w-6 rounded-full border transition-all duration-150 ${
+                              isSel ? "border-brand-500 scale-110 ring-2 ring-brand-200" : "border-stone-300 hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: swatch.hex }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Glass Color and Opacity */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-stone-500 block mb-1">
+                      Glass Opacity
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="0.9"
+                        step="0.05"
+                        value={selectedInstance.material?.glassOpacity ?? 0.4}
+                        onChange={(e) => {
+                          updateFurnitureTransform(selectedInstance.instanceId, {
+                            material: {
+                              ...selectedInstance.material,
+                              glassOpacity: parseFloat(e.target.value)
+                            }
+                          });
+                        }}
+                        className="w-full accent-brand-600 h-1.5"
+                      />
+                      <span className="text-[10px] font-bold text-stone-600 shrink-0">
+                        {Math.round((selectedInstance.material?.glassOpacity ?? 0.4) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedInstance.category === "Curtain" && (
+                <div className="flex flex-col gap-3">
+                  {/* Curtain Fabric Color */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-stone-500 block mb-1">
+                      Fabric Tone
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: "linen", label: "Linen", hex: "#FAF8F5" },
+                        { id: "blue", label: "Dusty Blue", hex: "#B8C9D4" },
+                        { id: "sage", label: "Soft Sage", hex: "#C8D5C0" },
+                        { id: "terra", label: "Terracotta", hex: "#C4785A" },
+                        { id: "charcoal", label: "Charcoal", hex: "#3A3A3A" },
+                      ].map((swatch) => {
+                        const isSel = (selectedInstance.material?.fabricColor || selectedInstance.color || "#ECEFF1") === swatch.hex;
+                        return (
+                          <button
+                            key={swatch.id}
+                            title={swatch.label}
+                            onClick={() => {
+                              updateFurnitureTransform(selectedInstance.instanceId, {
+                                material: {
+                                  ...selectedInstance.material,
+                                  fabricColor: swatch.hex,
+                                }
+                              });
+                            }}
+                            className={`h-6 w-6 rounded-full border transition-all duration-150 ${
+                              isSel ? "border-brand-500 scale-110 ring-2 ring-brand-200" : "border-stone-300 hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: swatch.hex }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Curtain Rod Finish */}
+                  <div>
+                    <span className="text-[10px] font-semibold text-stone-500 block mb-1">
+                      Rod Finish
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: "nickel", label: "Satin Nickel", hex: "#cfd8dc" },
+                        { id: "gold", label: "Antique Brass", hex: "#d4af37" },
+                        { id: "black", label: "Matte Black", hex: "#1a1a1a" },
+                      ].map((swatch) => {
+                        const isSel = (selectedInstance.material?.rodColor || "#cfd8dc") === swatch.hex;
+                        return (
+                          <button
+                            key={swatch.id}
+                            title={swatch.label}
+                            onClick={() => {
+                              updateFurnitureTransform(selectedInstance.instanceId, {
+                                material: {
+                                  ...selectedInstance.material,
+                                  rodColor: swatch.hex,
+                                }
+                              });
+                            }}
+                            className={`h-6 w-6 rounded-full border transition-all duration-150 ${
+                              isSel ? "border-brand-500 scale-110 ring-2 ring-brand-200" : "border-stone-300 hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: swatch.hex }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Delete Action Button */}
+            <button
+              type="button"
+              onClick={() => removeFurnitureItemByInstance(selectedInstance.instanceId)}
+              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Remove from Room
+            </button>
         </div>
       )}
 
-      {/* ── 2. SECTION SEPARATOR TABS (Furniture vs Elements) ── */}
+      {/* ── 2. SECTION SEPARATOR TABS (Furniture vs Elements vs Materials) ── */}
       <div className="flex rounded-xl bg-stone-100 p-1 border border-stone-200/50">
         <button
           type="button"
@@ -473,13 +701,30 @@ export default function FurnitureLibrary({ roomSlug }) {
               : "text-stone-500 hover:text-stone-900"
           }`}
         >
-          🚪 Room Elements
+          🚪 Elements
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("materials");
+            setSearchQuery("");
+          }}
+          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition-all duration-150 ${
+            activeSection === "materials"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-500 hover:text-stone-900"
+          }`}
+        >
+          🎨 Materials
         </button>
       </div>
 
       {/* ── 3. CATALOG SECTION ── */}
-      <div className="flex flex-col gap-3">
-        {/* Title / Description */}
+      {activeSection === "materials" ? (
+        <MaterialsStudio />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {/* Title / Description */}
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">
             {activeSection === "furniture" ? "Furniture Catalog" : "Architectural Elements"}
@@ -594,8 +839,8 @@ export default function FurnitureLibrary({ roomSlug }) {
             })}
           </div>
         )}
-      </div>
-
+        </div>
+      )}
     </div>
   );
 }

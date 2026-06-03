@@ -11,10 +11,30 @@ export function DesignProvider({ children }) {
   const [selectedInstanceId, setSelectedInstanceId] = useState(null);
   const [transformMode, setTransformMode] = useState("translate");
 
+  const defaultMaterials = {
+    walls: { type: "paint", color: "#FAF8F5", swatchId: "white-linen" },
+    flooring: { type: "wood", color: "#E6C594", swatchId: "light-oak" },
+    ceiling: { type: "standard", color: "#FAF8F5" },
+  };
+
+  const [roomMaterials, setRoomMaterials] = useState(defaultMaterials);
+
   const handleSetSelectedRoom = (room) => {
     setSelectedRoom(room);
     setFurnitureItems([]); // Reset furniture items when room changes
     setSelectedInstanceId(null); // Clear selected item
+    setRoomMaterials(defaultMaterials); // Reset materials
+  };
+
+  const updateRoomMaterials = (target, materialData) => {
+    setRoomMaterials((prev) => ({
+      ...prev,
+      [target]: {
+        ...prev[target],
+        ...materialData,
+      },
+    }));
+    console.log(`[MaterialsStudio] Updated ${target} materials:`, materialData);
   };
 
   const addFurnitureItem = (item) => {
@@ -65,7 +85,8 @@ export function DesignProvider({ children }) {
     );
   };
 
-  const updateFurnitureTransform = (instanceId, { position, rotation, scale }) => {
+  const updateFurnitureTransform = (instanceId, updates) => {
+    const { position, rotation, scale, heightOffset, material } = updates;
     if (position) {
       console.log(`[FurnitureManager] Position updated for instance ${instanceId}: X: ${position.x.toFixed(1)}%, Z: ${position.y.toFixed(1)}%`);
     }
@@ -84,6 +105,8 @@ export function DesignProvider({ children }) {
           position: position !== undefined ? position : p.position,
           rotation: rotation !== undefined ? rotation : p.rotation,
           scale: scale !== undefined ? scale : p.scale,
+          heightOffset: heightOffset !== undefined ? heightOffset : p.heightOffset,
+          material: material !== undefined ? material : p.material,
         };
       })
     );
@@ -126,6 +149,8 @@ export function DesignProvider({ children }) {
         setSelectedInstanceId,
         transformMode,
         setTransformMode,
+        roomMaterials,
+        updateRoomMaterials,
         saveDesign,
         loadDesign,
       }}

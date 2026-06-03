@@ -29,6 +29,7 @@ export default function DesignerPreview({
     transformMode,
     setTransformMode,
     removeFurnitureItemByInstance,
+    roomMaterials,
   } = useDesign();
 
   // Find the selected furniture instance
@@ -67,8 +68,6 @@ export default function DesignerPreview({
       {/* ── WebGL 3D Canvas Area ── */}
       <div className="relative flex-1 overflow-hidden">
         <RoomScene
-          wallColor={wallColor}
-          selectedFloor={selectedFloor}
           furnitureItems={furnitureItems}
         />
 
@@ -137,21 +136,25 @@ export default function DesignerPreview({
 
         {/* ── Info badges overlay ── */}
         <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-in fade-in duration-300">
             <span
               className="h-3 w-3 rounded-full border border-stone-200 shadow-sm"
-              style={{ backgroundColor: wallColor }}
+              style={{ backgroundColor: roomMaterials.walls.color }}
               aria-hidden="true"
             />
-            <span className="text-xs font-medium text-stone-700">Wall</span>
+            <span className="text-xs font-semibold text-stone-700">
+              Walls: <span className="capitalize text-brand-600 font-bold">{roomMaterials.walls.type}</span>
+            </span>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur-sm">
-            <span className="text-xs font-medium text-stone-700">Floor</span>
+          <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-in fade-in duration-300">
             <span
-              className="h-3 w-10 rounded-sm border border-stone-200"
-              style={{ backgroundImage: selectedFloor?.pattern, backgroundSize: "62px 100%" }}
+              className="h-3 w-3 rounded-full border border-stone-200 shadow-sm"
+              style={{ backgroundColor: roomMaterials.flooring.color }}
               aria-hidden="true"
             />
+            <span className="text-xs font-semibold text-stone-700">
+              Floor: <span className="capitalize text-brand-600 font-bold">{roomMaterials.flooring.type}</span>
+            </span>
           </div>
           {furnitureItems.length > 0 && (
             <div className="flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50/90 px-3 py-1.5 shadow-sm backdrop-blur-sm">

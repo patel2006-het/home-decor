@@ -1,33 +1,18 @@
-import ColorSwatch from "@/components/designer/ColorSwatch";
-import FloorOption from "@/components/designer/FloorOption";
 import FurnitureLibrary from "@/components/3d/FurnitureLibrary";
-import { wallColors, floorTypes } from "@/lib/data";
 import Image from "next/image";
 
 /**
  * DesignerSidebar — Left panel of the designer page.
  *
- * Displays: Room info, Style info, Wall Color picker, Floor Type picker.
- * Emits selection changes to the parent (DesignerClient) via callbacks.
+ * Displays: Room info, Style info, and the dynamic Furniture/Elements/Materials Library.
  *
  * @param {object} props
  * @param {{ name: string, image: string, description: string }} props.room
  * @param {{ name: string, image: string }} props.style
- * @param {{ id: string, hex: string, label: string }} props.selectedColor
- * @param {{ id: string, label: string, pattern: string }} props.selectedFloor
- * @param {function} props.onColorChange
- * @param {function} props.onFloorChange
  */
 export default function DesignerSidebar({
   room,
   style,
-  selectedColor,
-  selectedFloor,
-  onColorChange,
-  onFloorChange,
-  placedFurniture,
-  onFurnitureAdd,
-  onFurnitureRemove,
 }) {
   return (
     <aside
@@ -103,44 +88,7 @@ export default function DesignerSidebar({
           </a>
         </section>
 
-        {/* ── Wall Color ── */}
-        <section className="border-b border-stone-100 px-5 py-4">
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">
-            Wall Color
-          </h3>
-          <p className="mb-3 text-sm font-medium text-stone-800">
-            {selectedColor.label}
-          </p>
-          <div className="flex flex-wrap gap-2.5">
-            {wallColors.map((color) => (
-              <ColorSwatch
-                key={color.id}
-                color={color}
-                isSelected={selectedColor.id === color.id}
-                onSelect={onColorChange}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* ── Floor Type ── */}
-        <section className="border-b border-stone-100 px-5 py-4">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">
-            Floor Type
-          </h3>
-          <div className="flex flex-col gap-2">
-            {floorTypes.map((floor) => (
-              <FloorOption
-                key={floor.id}
-                floor={floor}
-                isSelected={selectedFloor.id === floor.id}
-                onSelect={onFloorChange}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* ── Furniture Library ── */}
+        {/* ── Furniture Library & Materials Studio ── */}
         <section className="pb-6">
           <FurnitureLibrary roomSlug={room.slug} />
         </section>

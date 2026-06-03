@@ -21,8 +21,6 @@ import { useDesign } from "@/context/DesignContext";
  * @param {Array}  props.furnitureItems  - Placed furniture items list
  */
 export default function RoomScene({
-  wallColor,
-  selectedFloor,
   furnitureItems = [],
 }) {
   const { setSelectedInstanceId } = useDesign();
@@ -47,10 +45,10 @@ export default function RoomScene({
         >
           
           {/* Reusable Floor Component */}
-          <RoomFloor selectedFloor={selectedFloor} />
+          <RoomFloor />
 
           {/* Reusable Walls & Ceiling Component */}
-          <RoomWalls wallColor={wallColor} />
+          <RoomWalls />
 
           {/* Centralized Furniture Coordinator Component */}
           <FurnitureManager furnitureItems={furnitureItems} />

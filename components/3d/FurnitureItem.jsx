@@ -5,6 +5,9 @@ import { useThree } from "@react-three/fiber";
 import { TransformControls, Html } from "@react-three/drei";
 import { useDesign } from "@/context/DesignContext";
 import FurnitureLoader from "@/components/3d/FurnitureLoader";
+import DoorModel from "@/components/3d/DoorModel";
+import WindowModel from "@/components/3d/WindowModel";
+import CurtainModel from "@/components/3d/CurtainModel";
 
 /**
  * FurnitureItem — Renders a placed furniture instance in 3D space.
@@ -55,7 +58,7 @@ export default function FurnitureItem({ instance }) {
   const x3D = (pctX / 100) * 5.4 - 2.7;
   const z3D = (pctY / 100) * 4.4 - 2.2;
 
-  // Bounding box size defaults (for fallback)
+  // Bounding box size defaults (for fallback / architectural scale)
   const w3D = (width ?? 100) / 100;
   const h3D = (height ?? 70) / 100;
   let d3D = 0.6; // Default depth
@@ -67,7 +70,11 @@ export default function FurnitureItem({ instance }) {
   else if (category === "Decor") d3D = 0.1;
 
   const isWallMounted = category === "Decor" && (id.includes("mirror") || id.includes("cabinet"));
-  const y3D = isWallMounted ? 1.5 : 0; // The GLB models should sit on the floor (y = 0), box geometry is offset in its definition
+  
+  // Architectural parameters
+  const isArchitectural = instance.isArchitectural ?? false;
+  const heightOffset = instance.heightOffset ?? (category === "Door" ? 0 : category === "Window" ? 1.0 : 1.2);
+  const y3D = isArchitectural ? heightOffset : (isWallMounted ? 1.5 : 0);
 
   // Resolve vectors
   const finalPosition = [x3D, y3D, z3D];
@@ -87,29 +94,84 @@ export default function FurnitureItem({ instance }) {
       }
     };
 
+    // Helper to calculate closest wall snap and restrict Y & X/Z rotation/scale
+    const applyArchitecturalSnapping = (mesh) => {
+      // 4 Wall Planes boundaries:
+      // Back wall: Z = -2.5, X in [-3, 3]
+      // Front wall: Z = 2.5, X in [-3, 3]
+      // Left wall: X = -3, Z in [-2.5, 2.5]
+      // Right wall: X = 3, Z in [-2.5, 2.5]
+      const distBack = Math.abs(mesh.position.z - (-2.5));
+      const distFront = Math.abs(mesh.position.z - 2.5);
+      const distLeft = Math.abs(mesh.position.x - (-3));
+      const distRight = Math.abs(mesh.position.x - 3);
+
+      const minDist = Math.min(distBack, distFront, distLeft, distRight);
+
+      if (minDist === distBack) {
+        mesh.position.z = -2.48; // attach to back wall
+        mesh.position.x = Math.max(-2.8, Math.min(2.8, mesh.position.x)); // clamp inside back wall
+        mesh.rotation.y = 0; // face inward
+      } else if (minDist === distFront) {
+        mesh.position.z = 2.48; // attach to front wall
+        mesh.position.x = Math.max(-2.8, Math.min(2.8, mesh.position.x)); // clamp inside front wall
+        mesh.rotation.y = Math.PI; // face inward
+      } else if (minDist === distLeft) {
+        mesh.position.x = -2.98; // attach to left wall
+        mesh.position.z = Math.max(-2.3, Math.min(2.3, mesh.position.z)); // clamp inside left wall
+        mesh.rotation.y = Math.PI / 2; // face inward
+      } else if (minDist === distRight) {
+        mesh.position.x = 2.98; // attach to right wall
+        mesh.position.z = Math.max(-2.3, Math.min(2.3, mesh.position.z)); // clamp inside right wall
+        mesh.rotation.y = -Math.PI / 2; // face inward
+      }
+
+      // Height constraints:
+      if (category === "Door") {
+        mesh.position.y = 0; // Doors must stay on the floor
+      } else if (category === "Window") {
+        mesh.position.y = Math.max(0.3, Math.min(2.2, mesh.position.y)); // Windows float
+      } else if (category === "Curtain") {
+        mesh.position.y = Math.max(0.6, Math.min(2.6, mesh.position.y)); // Curtains hang
+      }
+
+      // Force upright X/Z rotation
+      mesh.rotation.x = 0;
+      mesh.rotation.z = 0;
+
+      // Scale limits [0.3, 3.0]
+      mesh.scale.x = Math.max(0.3, Math.min(3.0, mesh.scale.x));
+      mesh.scale.y = Math.max(0.3, Math.min(3.0, mesh.scale.y));
+      mesh.scale.z = Math.max(0.3, Math.min(3.0, mesh.scale.z));
+    };
+
     // When the user releases the gizmo, update the state in context
     const handleMouseUp = () => {
       if (meshRef.current) {
         const currentMesh = meshRef.current;
         
-        // Clamp boundary limits
-        const minX = -2.7;
-        const maxX = 2.7;
-        const minZ = -2.2;
-        const maxZ = 2.2;
+        if (isArchitectural) {
+          applyArchitecturalSnapping(currentMesh);
+        } else {
+          // Clamp boundary limits
+          const minX = -2.7;
+          const maxX = 2.7;
+          const minZ = -2.2;
+          const maxZ = 2.2;
 
-        if (currentMesh.position.x < minX) currentMesh.position.x = minX;
-        if (currentMesh.position.x > maxX) currentMesh.position.x = maxX;
-        if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
-        if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
+          if (currentMesh.position.x < minX) currentMesh.position.x = minX;
+          if (currentMesh.position.x > maxX) currentMesh.position.x = maxX;
+          if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
+          if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
 
-        currentMesh.position.y = isWallMounted ? 1.5 : 0;
-        currentMesh.rotation.x = 0;
-        currentMesh.rotation.z = 0;
+          currentMesh.position.y = isWallMounted ? 1.5 : 0;
+          currentMesh.rotation.x = 0;
+          currentMesh.rotation.z = 0;
 
-        currentMesh.scale.x = Math.max(0.3, Math.min(3.0, currentMesh.scale.x));
-        currentMesh.scale.y = Math.max(0.3, Math.min(3.0, currentMesh.scale.y));
-        currentMesh.scale.z = Math.max(0.3, Math.min(3.0, currentMesh.scale.z));
+          currentMesh.scale.x = Math.max(0.3, Math.min(3.0, currentMesh.scale.x));
+          currentMesh.scale.y = Math.max(0.3, Math.min(3.0, currentMesh.scale.y));
+          currentMesh.scale.z = Math.max(0.3, Math.min(3.0, currentMesh.scale.z));
+        }
 
         // Convert the mesh's local position back to percentage-based coordinates
         const newPctX = Math.max(0, Math.min(100, ((currentMesh.position.x + 2.7) / 5.4) * 100));
@@ -129,12 +191,18 @@ export default function FurnitureItem({ instance }) {
           z: currentMesh.scale.z,
         };
 
-        // Sync changes back to DesignContext
-        updateFurnitureTransform(instance.instanceId, {
+        const updateData = {
           position: { x: newPctX, y: newPctY },
           rotation: newRot,
           scale: newScale,
-        });
+        };
+
+        if (isArchitectural) {
+          updateData.heightOffset = currentMesh.position.y;
+        }
+
+        // Sync changes back to DesignContext
+        updateFurnitureTransform(instance.instanceId, updateData);
       }
     };
 
@@ -143,28 +211,32 @@ export default function FurnitureItem({ instance }) {
       if (meshRef.current) {
         const currentMesh = meshRef.current;
         
-        // 1. Boundary Clamping (Room floor boundaries: X: [-2.7, 2.7], Z: [-2.2, 2.2])
-        const minX = -2.7;
-        const maxX = 2.7;
-        const minZ = -2.2;
-        const maxZ = 2.2;
+        if (isArchitectural) {
+          applyArchitecturalSnapping(currentMesh);
+        } else {
+          // 1. Boundary Clamping (Room floor boundaries: X: [-2.7, 2.7], Z: [-2.2, 2.2])
+          const minX = -2.7;
+          const maxX = 2.7;
+          const minZ = -2.2;
+          const maxZ = 2.2;
 
-        if (currentMesh.position.x < minX) currentMesh.position.x = minX;
-        if (currentMesh.position.x > maxX) currentMesh.position.x = maxX;
-        if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
-        if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
+          if (currentMesh.position.x < minX) currentMesh.position.x = minX;
+          if (currentMesh.position.x > maxX) currentMesh.position.x = maxX;
+          if (currentMesh.position.z < minZ) currentMesh.position.z = minZ;
+          if (currentMesh.position.z > maxZ) currentMesh.position.z = maxZ;
 
-        // Force height to stay on floor (0) unless wall-mounted decoration (1.5)
-        currentMesh.position.y = isWallMounted ? 1.5 : 0;
+          // Force height to stay on floor (0) unless wall-mounted decoration (1.5)
+          currentMesh.position.y = isWallMounted ? 1.5 : 0;
 
-        // 2. Rotation locks (keep furniture flat on the floor, no side tilting)
-        currentMesh.rotation.x = 0;
-        currentMesh.rotation.z = 0;
+          // 2. Rotation locks (keep furniture flat on the floor, no side tilting)
+          currentMesh.rotation.x = 0;
+          currentMesh.rotation.z = 0;
 
-        // 3. Scale Range limits [0.3, 3.0]
-        currentMesh.scale.x = Math.max(0.3, Math.min(3.0, currentMesh.scale.x));
-        currentMesh.scale.y = Math.max(0.3, Math.min(3.0, currentMesh.scale.y));
-        currentMesh.scale.z = Math.max(0.3, Math.min(3.0, currentMesh.scale.z));
+          // 3. Scale Range limits [0.3, 3.0]
+          currentMesh.scale.x = Math.max(0.3, Math.min(3.0, currentMesh.scale.x));
+          currentMesh.scale.y = Math.max(0.3, Math.min(3.0, currentMesh.scale.y));
+          currentMesh.scale.z = Math.max(0.3, Math.min(3.0, currentMesh.scale.z));
+        }
 
         // 4. Update real-time coordinates HUD label
         const newPctX = Math.max(0, Math.min(100, ((currentMesh.position.x + 2.7) / 5.4) * 100));
@@ -182,7 +254,7 @@ export default function FurnitureItem({ instance }) {
       transformControls.removeEventListener("mouseUp", handleMouseUp);
       transformControls.removeEventListener("objectChange", handleObjectChange);
     };
-  }, [isSelected, controls, instance.instanceId, updateFurnitureTransform, isWallMounted]);
+  }, [isSelected, controls, instance.instanceId, updateFurnitureTransform, isWallMounted, isArchitectural, category]);
 
   // Fallback Mesh (renders if GLB is missing, loading, or fails)
   const fallbackMesh = (
@@ -214,7 +286,15 @@ export default function FurnitureItem({ instance }) {
         setSelectedInstanceId(instance.instanceId);
       }}
     >
-      <FurnitureLoader modelUrl={modelUrl} fallback={fallbackMesh} />
+      {isArchitectural ? (
+        <group>
+          {category === "Door" && <DoorModel instance={instance} />}
+          {category === "Window" && <WindowModel instance={instance} />}
+          {category === "Curtain" && <CurtainModel instance={instance} />}
+        </group>
+      ) : (
+        <FurnitureLoader modelUrl={modelUrl} fallback={fallbackMesh} />
+      )}
 
       {/* Floating HTML label sprite */}
       <Html

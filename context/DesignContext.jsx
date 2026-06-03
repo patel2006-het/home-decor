@@ -19,8 +19,8 @@ export function DesignProvider({ children }) {
 
   const addFurnitureItem = (item) => {
     setFurnitureItems((prev) => {
-      // Prevent adding the same item type twice in the current step
-      if (prev.some((p) => p.id === item.id)) return prev;
+      // Prevent adding the same furniture item type twice, but allow multiple doors, windows, and curtains
+      if (!item.isArchitectural && prev.some((p) => p.id === item.id)) return prev;
       const newInstance = {
         ...item,
         instanceId: `${item.id}-${Date.now()}`,

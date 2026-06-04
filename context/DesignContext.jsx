@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { roomSelectionData } from "@/lib/data";
+import { roomSelectionData, furnitureCatalog, roomElementsCatalog, lightingCatalog } from "@/lib/data";
 import { projectService } from "@/lib/projectService";
 import { useAuth } from "@/context/AuthContext";
 
@@ -242,6 +242,104 @@ export function DesignProvider({ children }) {
     );
   };
 
+  const applyAiSuggestions = (suggestions, replaceExisting = true) => {
+    if (!suggestions) return;
+
+    // 1. Update global lighting
+    const lighting = suggestions.lighting;
+    if (lighting) {
+      updateGlobalLighting({
+        ambientIntensity: lighting.ambientIntensity ?? 0.7,
+        ambientTemp: lighting.ambientTemp ?? 3000,
+        directionalIntensity: lighting.directionalIntensity ?? 0.8,
+        shadowsEnabled: lighting.shadowsEnabled ?? true,
+      });
+    }
+
+    // 2. Update wall & floor materials
+    const materials = suggestions.materials;
+    if (materials) {
+      if (materials.walls) {
+        updateRoomMaterials("walls", {
+          color: materials.walls.color || "#FAF8F5",
+          texture: materials.walls.texture || "plaster",
+          type: "paint",
+        });
+      }
+      if (materials.floor) {
+        updateRoomMaterials("flooring", {
+          color: materials.floor.color || "#E6C594",
+          texture: materials.floor.texture || "oak",
+          type: "wood",
+        });
+      }
+    }
+
+    // 3. Update placed furniture / lighting / elements
+    const suggestedFurniture = suggestions.furniture || [];
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (room.id !== activeRoomId) return room;
+
+        const currentRoomType = room.type;
+        const roomCatalog = furnitureCatalog[currentRoomType] || [];
+
+        const newInstances = [];
+        suggestedFurniture.forEach((sugItem) => {
+          // Find standard catalog item
+          let catalogItem = roomCatalog.find((i) => i.id === sugItem.itemId);
+          if (!catalogItem) {
+            catalogItem = lightingCatalog.find((i) => i.id === sugItem.itemId);
+          }
+          if (!catalogItem) {
+            catalogItem = roomElementsCatalog.find((i) => i.id === sugItem.itemId);
+          }
+
+          if (catalogItem) {
+            const instanceId = `${catalogItem.id}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+            const newInst = {
+              ...catalogItem,
+              instanceId,
+              type: catalogItem.category || "Furniture",
+              position: sugItem.position || { x: 50, y: 50 },
+              rotation: sugItem.rotation !== undefined
+                ? (typeof sugItem.rotation === "number" ? { x: 0, y: sugItem.rotation, z: 0 } : sugItem.rotation)
+                : { x: 0, y: 0, z: 0 },
+              scale: sugItem.scale !== undefined
+                ? (typeof sugItem.scale === "number" ? { x: sugItem.scale, y: sugItem.scale, z: sugItem.scale } : sugItem.scale)
+                : { x: 1, y: 1, z: 1 },
+              color: sugItem.color || catalogItem.color,
+            };
+
+            if (catalogItem.isLight) {
+              newInst.lightSettings = {
+                color: sugItem.lightSettings?.color || "#ffedd5",
+                intensity: sugItem.lightSettings?.intensity || 1.5,
+                temperature: sugItem.lightSettings?.temperature || 3000,
+                range: sugItem.lightSettings?.range || 5,
+              };
+            }
+
+            if (sugItem.material) {
+              newInst.material = sugItem.material;
+            }
+
+            newInstances.push(newInst);
+          }
+        });
+
+        const finalItems = replaceExisting
+          ? newInstances
+          : [...room.furnitureItems, ...newInstances];
+
+        return {
+          ...room,
+          furnitureItems: finalItems,
+        };
+      })
+    );
+  };
+
   const updateFurniturePosition = (instanceId, x, y) => {
     console.log(`[FurnitureManager] Position updated for instance ${instanceId}: X: ${x.toFixed(1)}%, Y: ${y.toFixed(1)}%`);
     setRoomsList((prevRooms) =>
@@ -377,6 +475,7 @@ export function DesignProvider({ children }) {
         updateRoomMaterials,
         globalLighting,
         updateGlobalLighting,
+        applyAiSuggestions,
         saveDesign,
         loadDesign,
         // Multi-Room states and actions

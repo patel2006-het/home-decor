@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useDesign } from "@/context/DesignContext";
 import { furnitureCatalog, roomElementsCatalog, lightingCatalog } from "@/lib/data";
 import MaterialsStudio from "@/components/designer/MaterialsStudio";
+import AiDesignerPanel from "@/components/designer/AiDesignerPanel";
 
 /**
  * FurnitureLibrary — Premium UI sidebar panel.
@@ -912,6 +913,20 @@ export default function FurnitureLibrary({ roomSlug }) {
         >
           🎨 Materials
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("ai");
+            setSearchQuery("");
+          }}
+          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition-all duration-150 ${
+            activeSection === "ai"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-500 hover:text-stone-900"
+          }`}
+        >
+          ✨ AI
+        </button>
       </div>
 
       {/* ── 3. CATALOG SECTION ── */}
@@ -919,6 +934,8 @@ export default function FurnitureLibrary({ roomSlug }) {
         <MaterialsStudio />
       ) : activeSection === "lighting" ? (
         <LightingStudioPanel />
+      ) : activeSection === "ai" ? (
+        <AiDesignerPanel />
       ) : (
         <div className="flex flex-col gap-3">
           {/* Title / Description */}

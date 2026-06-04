@@ -10,20 +10,50 @@ const generateDesignId = () => {
   return `design_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-// Check if current session user owns the project or if it's a guest project
-async function checkOwnership(project, request) {
+// Get active user details from session
+async function getSessionUser() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("havendecor_session_id");
-  let activeUserId = "guest";
-
   if (sessionCookie && sessionCookie.value) {
-    const sessionUser = decryptSession(sessionCookie.value);
-    if (sessionUser) {
-      activeUserId = sessionUser.id;
-    }
+    return decryptSession(sessionCookie.value);
+  }
+  return null;
+}
+
+// Check if current user has read or write access
+async function checkAccess(project, request, requireEditor = false) {
+  const sessionUser = await getSessionUser();
+  const activeUserId = sessionUser?.id || "guest";
+  const activeUserEmail = sessionUser?.email || null;
+
+  if (project.userId === "guest" || !project.userId) {
+    return true;
   }
 
-  // Guest projects can be edited by guest session
+  if (project.userId === activeUserId) {
+    return true;
+  }
+
+  const collaborators = project.collaborators || [];
+  const col = collaborators.find(
+    (c) => c.userId === activeUserId || (activeUserEmail && c.email.toLowerCase() === activeUserEmail.toLowerCase())
+  );
+
+  if (col) {
+    if (requireEditor && col.role === "viewer") {
+      return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+// Check if current user is the owner (for delete or admin operations)
+async function isProjectOwner(project) {
+  const sessionUser = await getSessionUser();
+  const activeUserId = sessionUser?.id || "guest";
+
   if (project.userId === "guest" || !project.userId) {
     return true;
   }
@@ -41,6 +71,14 @@ export async function GET(request, { params }) {
     const project = await projectsCollection.findOne({ id });
     if (!project) {
       return NextResponse.json({ message: "Project not found" }, { status: 404 });
+    }
+
+    const hasAccess = await checkAccess(project, request, false);
+    if (!hasAccess) {
+      return NextResponse.json(
+        { message: "You do not have permission to view this project" },
+        { status: 403 }
+      );
     }
 
     const designDoc = await designsCollection.findOne({ designId: project.designId });
@@ -78,9 +116,9 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ message: "Project not found" }, { status: 404 });
     }
 
-    // Verify ownership
-    const isOwner = await checkOwnership(project, request);
-    if (!isOwner) {
+    // Verify write access
+    const hasWriteAccess = await checkAccess(project, request, true);
+    if (!hasWriteAccess) {
       return NextResponse.json(
         { message: "You do not have permission to modify this project" },
         { status: 403 }
@@ -88,7 +126,10 @@ export async function PUT(request, { params }) {
     }
 
     const now = new Date().toISOString();
-    const projectUpdates = { updatedAt: now };
+    const projectUpdates = {
+      updatedAt: now,
+      version: (project.version || 1) + 1
+    };
 
     if (updates?.name?.trim()) {
       projectUpdates.name = updates.name.trim();
@@ -143,11 +184,11 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ message: "Project not found" }, { status: 404 });
     }
 
-    // Verify ownership
-    const isOwner = await checkOwnership(project, request);
+    // Verify ownership (only the project owner/creator can delete)
+    const isOwner = await isProjectOwner(project);
     if (!isOwner) {
       return NextResponse.json(
-        { message: "You do not have permission to delete this project" },
+        { message: "You do not have permission to delete this project. Only the project owner can perform this action." },
         { status: 403 }
       );
     }

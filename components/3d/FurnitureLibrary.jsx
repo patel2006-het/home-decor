@@ -4,6 +4,7 @@ import { furnitureCatalog, roomElementsCatalog, lightingCatalog } from "@/lib/da
 import MaterialsStudio from "@/components/designer/MaterialsStudio";
 import AiDesignerPanel from "@/components/designer/AiDesignerPanel";
 import MarketplaceSwapModal from "@/components/designer/MarketplaceSwapModal";
+import CollaborationPanel from "@/components/designer/CollaborationPanel";
 
 /**
  * FurnitureLibrary — Premium UI sidebar panel.
@@ -948,6 +949,20 @@ export default function FurnitureLibrary({ roomSlug }) {
         >
           ✨ AI
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection("collab");
+            setSearchQuery("");
+          }}
+          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition-all duration-150 ${
+            activeSection === "collab"
+              ? "bg-white text-stone-900 shadow-sm"
+              : "text-stone-500 hover:text-stone-900"
+          }`}
+        >
+          👥 Collab
+        </button>
       </div>
 
       {/* ── 3. CATALOG SECTION ── */}
@@ -957,6 +972,8 @@ export default function FurnitureLibrary({ roomSlug }) {
         <LightingStudioPanel />
       ) : activeSection === "ai" ? (
         <AiDesignerPanel />
+      ) : activeSection === "collab" ? (
+        <CollaborationPanel />
       ) : (
         <div className="flex flex-col gap-3">
           {/* Title / Description */}

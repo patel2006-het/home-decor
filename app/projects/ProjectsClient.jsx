@@ -20,6 +20,7 @@ export default function ProjectsClient() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("updated"); // "updated", "created", "alphabetical"
+  const [invitations, setInvitations] = useState([]);
 
   // Modals state
   const [activeModal, setActiveModal] = useState(null); // null, "rename", "delete", "share"
@@ -40,9 +41,39 @@ export default function ProjectsClient() {
     }
   };
 
+  const fetchInvitations = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch("/api/invitations");
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch invitations:", e);
+    }
+  };
+
+  const handleResponseInvite = async (inviteId, status) => {
+    try {
+      const res = await fetch(`/api/invitations/${inviteId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        fetchInvitations();
+        fetchProjects();
+      }
+    } catch (e) {
+      console.error("Failed to respond to invitation:", e);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading) {
       fetchProjects();
+      fetchInvitations();
     }
   }, [user?.id, authLoading]);
 
@@ -219,6 +250,53 @@ export default function ProjectsClient() {
           </Link>
         </div>
       </div>
+
+      {/* Incoming Invitations Banner */}
+      {invitations.length > 0 && (
+        <div className="rounded-3xl border border-brand-200 bg-brand-50/50 p-6 mb-8 shadow-sm">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-brand-700 mb-4 flex items-center gap-2">
+            <span>👥 Incoming Project Invitations</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-black text-white">
+              {invitations.length}
+            </span>
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {invitations.map((invite) => (
+              <div
+                key={invite.id}
+                className="rounded-2xl border border-stone-200 bg-white p-4.5 shadow-sm flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="text-xs font-bold text-stone-900 truncate">
+                    {invite.projectName}
+                  </h3>
+                  <p className="text-[10px] text-stone-500 mt-1 leading-normal">
+                    Invited by: <strong className="font-semibold text-stone-700">{invite.inviterName}</strong> ({invite.inviterEmail})
+                  </p>
+                  <p className="text-[9px] text-stone-405 mt-0.5 font-medium">
+                    Role: <span className="uppercase font-bold text-brand-650">{invite.role || "editor"}</span>
+                  </p>
+                </div>
+                
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => handleResponseInvite(invite.id, "accepted")}
+                    className="flex-1 rounded-xl bg-brand-700 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-850 active:scale-98 transition-all"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleResponseInvite(invite.id, "rejected")}
+                    className="flex-1 rounded-xl border border-stone-200 bg-white py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50 transition-colors"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200 pb-6 mb-8">

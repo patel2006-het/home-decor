@@ -17,10 +17,12 @@ export async function GET(request) {
     const sessionCookie = cookieStore.get("havendecor_session_id");
     let activeUserId = "guest";
 
+    let activeUserEmail = null;
     if (sessionCookie && sessionCookie.value) {
       const sessionUser = decryptSession(sessionCookie.value);
       if (sessionUser) {
         activeUserId = sessionUser.id;
+        activeUserEmail = sessionUser.email;
       }
     }
 
@@ -28,10 +30,16 @@ export async function GET(request) {
     const projectsCollection = db.collection("Projects");
     const designsCollection = db.collection("Designs");
 
-    // Filter projects matching current userId
+    // Filter projects matching current userId OR where they are a collaborator
     const query = activeUserId === "guest"
       ? { $or: [{ userId: { $exists: false } }, { userId: "guest" }] }
-      : { userId: activeUserId };
+      : {
+          $or: [
+            { userId: activeUserId },
+            { "collaborators.userId": activeUserId },
+            { "collaborators.email": activeUserEmail }
+          ]
+        };
 
     const projects = await projectsCollection.find(query).sort({ updatedAt: -1 }).toArray();
 
@@ -102,6 +110,10 @@ export async function POST(request) {
       designId,
       createdAt: now,
       updatedAt: now,
+      collaborators: [],
+      comments: [],
+      reviewStatus: "pending",
+      version: 1,
     };
 
     await projectsCollection.insertOne(newProject);
@@ -114,6 +126,10 @@ export async function POST(request) {
       createdAt: newProject.createdAt,
       updatedAt: newProject.updatedAt,
       designData,
+      collaborators: newProject.collaborators,
+      comments: newProject.comments,
+      reviewStatus: newProject.reviewStatus,
+      version: newProject.version,
     };
 
     return NextResponse.json(createdProject, { status: 201 });

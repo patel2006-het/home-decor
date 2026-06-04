@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { roomSelectionData, furnitureCatalog, roomElementsCatalog, lightingCatalog } from "@/lib/data";
 import { projectService } from "@/lib/projectService";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +20,13 @@ export function DesignProvider({ children }) {
   
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [activeProjectName, setActiveProjectName] = useState(null);
+
+  // Collaboration States
+  const [collaborators, setCollaborators] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [reviewStatus, setReviewStatus] = useState("pending");
+  const currentVersionRef = useRef(1);
+  const isSavingRef = useRef(false);
 
   const defaultMaterials = {
     walls: { type: "paint", color: "#FAF8F5", swatchId: "white-linen" },
@@ -421,18 +428,31 @@ export function DesignProvider({ children }) {
   };
 
   const saveCurrentProject = async (customName) => {
-    const designData = saveDesign();
-    const name = customName?.trim() || activeProjectName || "Untitled Design";
-    
-    if (activeProjectId) {
-      const updated = await projectService.updateProject(activeProjectId, designData, { name });
-      setActiveProjectName(updated.name);
-      return updated.id;
-    } else {
-      const created = await projectService.createProject(name, designData, userId);
-      setActiveProjectId(created.id);
-      setActiveProjectName(created.name);
-      return created.id;
+    isSavingRef.current = true;
+    try {
+      const designData = saveDesign();
+      const name = customName?.trim() || activeProjectName || "Untitled Design";
+      
+      if (activeProjectId) {
+        const updated = await projectService.updateProject(activeProjectId, designData, { name });
+        setActiveProjectName(updated.name);
+        currentVersionRef.current = updated.version || currentVersionRef.current + 1;
+        setCollaborators(updated.collaborators || []);
+        setComments(updated.comments || []);
+        setReviewStatus(updated.reviewStatus || "pending");
+        return updated.id;
+      } else {
+        const created = await projectService.createProject(name, designData, userId);
+        setActiveProjectId(created.id);
+        setActiveProjectName(created.name);
+        currentVersionRef.current = created.version || 1;
+        setCollaborators(created.collaborators || []);
+        setComments(created.comments || []);
+        setReviewStatus(created.reviewStatus || "pending");
+        return created.id;
+      }
+    } finally {
+      isSavingRef.current = false;
     }
   };
 
@@ -441,6 +461,10 @@ export function DesignProvider({ children }) {
     loadDesign(project.designData);
     setActiveProjectId(project.id);
     setActiveProjectName(project.name);
+    setCollaborators(project.collaborators || []);
+    setComments(project.comments || []);
+    setReviewStatus(project.reviewStatus || "pending");
+    currentVersionRef.current = project.version || 1;
   };
 
   const resetProjectState = () => {
@@ -451,7 +475,101 @@ export function DesignProvider({ children }) {
     setRoomsList([]);
     setActiveRoomId(null);
     setSelectedInstanceId(null);
+    setCollaborators([]);
+    setComments([]);
+    setReviewStatus("pending");
+    currentVersionRef.current = 1;
   };
+
+  const addComment = async (text, roomId = null) => {
+    if (!activeProjectId || !text?.trim()) return;
+    try {
+      const res = await fetch(`/api/projects/${activeProjectId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, roomId }),
+      });
+      if (res.ok) {
+        const newComment = await res.json();
+        setComments((prev) => [...prev, newComment]);
+        currentVersionRef.current += 1;
+      }
+    } catch (e) {
+      console.error("Failed to add comment:", e);
+    }
+  };
+
+  const submitReview = async (status) => {
+    if (!activeProjectId) return;
+    try {
+      const res = await fetch(`/api/projects/${activeProjectId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviewStatus(status);
+        if (data.systemComment) {
+          setComments((prev) => [...prev, data.systemComment]);
+        }
+        currentVersionRef.current += 1;
+      }
+    } catch (e) {
+      console.error("Failed to submit review:", e);
+    }
+  };
+
+  const inviteCollaborator = async (email) => {
+    if (!activeProjectId || !email?.trim()) return;
+    const res = await fetch("/api/invitations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId: activeProjectId, inviteeEmail: email, role: "editor" }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || "Failed to send invitation");
+    }
+    return res.json();
+  };
+
+  // Polling Sync Effect (WebSocket Preparation)
+  useEffect(() => {
+    if (!activeProjectId) return;
+    let isMounted = true;
+
+    const interval = setInterval(async () => {
+      if (isSavingRef.current) return;
+      try {
+        const res = await fetch(`/api/projects/${activeProjectId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted) return;
+
+        const serverVersion = data.version || 1;
+        if (serverVersion > currentVersionRef.current) {
+          currentVersionRef.current = serverVersion;
+          if (data.designData) {
+            setRoomsList(data.designData.roomsList || []);
+            if (data.designData.activeRoomId) setActiveRoomId(data.designData.activeRoomId);
+          }
+          console.log(`[Collaboration] live-sync: project layout updated to version ${serverVersion}`);
+        }
+
+        setCollaborators(data.collaborators || []);
+        setComments(data.comments || []);
+        setReviewStatus(data.reviewStatus || "pending");
+      } catch (e) {
+        console.error("[Collaboration] Live sync polling failed:", e);
+      }
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [activeProjectId]);
 
   const swapFurnitureItem = (instanceId, realProduct) => {
     if (!instanceId || !realProduct) return;
@@ -563,6 +681,12 @@ export function DesignProvider({ children }) {
         loadProject,
         resetProjectState,
         swapFurnitureItem,
+        collaborators,
+        comments,
+        reviewStatus,
+        addComment,
+        submitReview,
+        inviteCollaborator,
       }}
     >
       {children}

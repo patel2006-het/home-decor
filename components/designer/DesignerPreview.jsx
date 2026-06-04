@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDesign } from "@/context/DesignContext";
 import { projectService } from "@/lib/projectService";
+import { useAuth } from "@/context/AuthContext";
 
 // Dynamically import RoomScene with SSR disabled to prevent hydration mismatches
 // because WebGL and Three.js rely on browser-only window/WebGLContext APIs.
@@ -30,6 +31,7 @@ export default function DesignerPreview({
   onSaveShared,
 }) {
   const router = useRouter();
+  const { user } = useAuth();
   const {
     selectedInstanceId,
     transformMode,
@@ -137,7 +139,7 @@ export default function DesignerPreview({
     if (!activeProjectId) return;
     setSaveStatus("saving");
     try {
-      const dup = await projectService.duplicateProject(activeProjectId);
+      const dup = await projectService.duplicateProject(activeProjectId, user?.id);
       setSaveStatus("saved");
       router.push(`/designer?project=${dup.id}`);
       setTimeout(() => setSaveStatus("idle"), 1500);

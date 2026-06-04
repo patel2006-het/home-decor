@@ -1,6 +1,7 @@
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { DesignProvider } from "@/context/DesignContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 const display = Cormorant_Garamond({
   variable: "--font-display",
@@ -24,7 +25,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} h-full scroll-smooth`}>
       <body className="min-h-full flex flex-col font-sans antialiased">
-        <DesignProvider>{children}</DesignProvider>
+        <AuthProvider>
+          <DesignProvider>{children}</DesignProvider>
+        </AuthProvider>
       </body>
     </html>
   );

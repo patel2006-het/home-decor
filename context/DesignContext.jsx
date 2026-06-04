@@ -3,10 +3,14 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { roomSelectionData } from "@/lib/data";
 import { projectService } from "@/lib/projectService";
+import { useAuth } from "@/context/AuthContext";
 
 const DesignContext = createContext(undefined);
 
 export function DesignProvider({ children }) {
+  const { user } = useAuth();
+  const userId = user?.id || "guest";
+
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [roomsList, setRoomsList] = useState([]);
@@ -327,7 +331,7 @@ export function DesignProvider({ children }) {
       setActiveProjectName(updated.name);
       return updated.id;
     } else {
-      const created = await projectService.createProject(name, designData);
+      const created = await projectService.createProject(name, designData, userId);
       setActiveProjectId(created.id);
       setActiveProjectName(created.name);
       return created.id;

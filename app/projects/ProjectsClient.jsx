@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import { projectService } from "@/lib/projectService";
+import { useAuth } from "@/context/AuthContext";
 import { roomSelectionData } from "@/lib/data";
 
 const breadcrumbItems = [
@@ -14,6 +15,7 @@ const breadcrumbItems = [
 
 export default function ProjectsClient() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,7 +31,7 @@ export default function ProjectsClient() {
 
   const fetchProjects = async () => {
     try {
-      const data = await projectService.getAllProjects();
+      const data = await projectService.getAllProjects(user?.id);
       setProjects(data);
     } catch (e) {
       console.error("Failed to fetch projects:", e);
@@ -39,8 +41,10 @@ export default function ProjectsClient() {
   };
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (!authLoading) {
+      fetchProjects();
+    }
+  }, [user?.id, authLoading]);
 
   const handleOpenRename = (project, e) => {
     e.preventDefault();
@@ -91,7 +95,7 @@ export default function ProjectsClient() {
     e.stopPropagation();
     setActionLoading(true);
     try {
-      await projectService.duplicateProject(projectId);
+      await projectService.duplicateProject(projectId, user?.id);
       await fetchProjects();
     } catch (err) {
       console.error("Failed to duplicate project:", err);
@@ -250,7 +254,7 @@ export default function ProjectsClient() {
       </div>
 
       {/* Projects List */}
-      {loading ? (
+      {loading || authLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-stone-200 border-t-brand-700" />
           <p className="text-xs text-stone-500">Loading your projects...</p>
@@ -300,7 +304,7 @@ export default function ProjectsClient() {
                   <div className="mt-auto border-t border-stone-100 pt-4 flex flex-col gap-1 text-[10px] text-stone-400">
                     <div className="flex justify-between">
                       <span>Updated:</span>
-                      <span className="font-semibold text-stone-500">{formatDate(project.updatedAt)}</span>
+                      <span className="font-semibold text-stone-555">{formatDate(project.updatedAt)}</span>
                     </div>
                   </div>
                   
@@ -340,7 +344,7 @@ export default function ProjectsClient() {
 
                     <button
                       onClick={(e) => handleOpenDelete(project, e)}
-                      className="rounded-lg p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-650 transition-colors ml-auto"
+                      className="rounded-lg p-1.5 text-stone-450 hover:bg-red-50 hover:text-red-555 transition-colors ml-auto"
                       title="Delete Design"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

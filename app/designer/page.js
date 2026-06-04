@@ -53,6 +53,8 @@ export default async function DesignerPage({ searchParams }) {
 
   const roomSlug  = params?.room  ?? "living-room";
   const styleSlug = params?.style ?? "modern";
+  const projectId = params?.project ?? null;
+  const shareData = params?.share ?? null;
 
   const room  = resolveRoom(roomSlug);
   const style = resolveStyle(styleSlug);
@@ -60,7 +62,12 @@ export default async function DesignerPage({ searchParams }) {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <Navbar />
-      <DesignerClient room={room} style={style} />
+      <DesignerClient 
+        room={room} 
+        style={style} 
+        projectId={projectId} 
+        shareData={shareData} 
+      />
     </div>
   );
 }

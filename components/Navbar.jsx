@@ -13,7 +13,7 @@ export default function Navbar() {
         className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8"
         aria-label="Main navigation"
       >
-        <Link href="#home" className="group flex items-center gap-2">
+        <Link href="/" className="group flex items-center gap-2">
           <span
             className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white"
             aria-hidden="true"

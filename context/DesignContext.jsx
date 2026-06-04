@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { roomSelectionData } from "@/lib/data";
+import { projectService } from "@/lib/projectService";
 
 const DesignContext = createContext(undefined);
 
@@ -12,6 +13,9 @@ export function DesignProvider({ children }) {
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [selectedInstanceId, setSelectedInstanceId] = useState(null);
   const [transformMode, setTransformMode] = useState("translate");
+  
+  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [activeProjectName, setActiveProjectName] = useState(null);
 
   const defaultMaterials = {
     walls: { type: "paint", color: "#FAF8F5", swatchId: "white-linen" },
@@ -314,6 +318,39 @@ export function DesignProvider({ children }) {
     console.log("Multi-room design loaded successfully.");
   };
 
+  const saveCurrentProject = async (customName) => {
+    const designData = saveDesign();
+    const name = customName?.trim() || activeProjectName || "Untitled Design";
+    
+    if (activeProjectId) {
+      const updated = await projectService.updateProject(activeProjectId, designData, { name });
+      setActiveProjectName(updated.name);
+      return updated.id;
+    } else {
+      const created = await projectService.createProject(name, designData);
+      setActiveProjectId(created.id);
+      setActiveProjectName(created.name);
+      return created.id;
+    }
+  };
+
+  const loadProject = (project) => {
+    if (!project) return;
+    loadDesign(project.designData);
+    setActiveProjectId(project.id);
+    setActiveProjectName(project.name);
+  };
+
+  const resetProjectState = () => {
+    setActiveProjectId(null);
+    setActiveProjectName(null);
+    setSelectedRoom(null);
+    setSelectedStyle(null);
+    setRoomsList([]);
+    setActiveRoomId(null);
+    setSelectedInstanceId(null);
+  };
+
   return (
     <DesignContext.Provider
       value={{
@@ -346,6 +383,14 @@ export function DesignProvider({ children }) {
         removeRoom,
         renameRoom,
         initializeHouse,
+        // Project Management states and actions
+        activeProjectId,
+        activeProjectName,
+        setActiveProjectId,
+        setActiveProjectName,
+        saveCurrentProject,
+        loadProject,
+        resetProjectState,
       }}
     >
       {children}

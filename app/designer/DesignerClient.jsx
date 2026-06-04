@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import DesignerSidebar from "@/components/designer/DesignerSidebar";
 import DesignerPreview from "@/components/designer/DesignerPreview";
 import { useDesign } from "@/context/DesignContext";
 import { roomSelectionData } from "@/lib/data";
+import { projectService } from "@/lib/projectService";
 
 /**
  * DesignerClient — The single "use client" boundary for the /designer page.
@@ -16,7 +18,13 @@ import { roomSelectionData } from "@/lib/data";
  * @param {{ slug, name, image, description }} room
  * @param {{ slug, name, image, description }} style
  */
-export default function DesignerClient({ room: initialRoom, style: initialStyle }) {
+export default function DesignerClient({ 
+  room: initialRoom, 
+  style: initialStyle,
+  projectId = null,
+  shareData = null
+}) {
+  const router = useRouter();
   const {
     selectedRoom,
     selectedStyle,
@@ -24,13 +32,91 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
     roomsList,
     activeRoomId,
     initializeHouse,
+    loadDesign,
+    loadProject,
+    activeProjectId,
+    setActiveProjectId,
+    setActiveProjectName,
+    saveDesign,
   } = useDesign();
 
+  const [loading, setLoading] = useState(true);
+  const [isSharedView, setIsSharedView] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   useEffect(() => {
-    if (roomsList.length === 0) {
-      initializeHouse(initialRoom);
-    }
-  }, [initialRoom, roomsList, initializeHouse]);
+    let active = true;
+
+    const initWorkspace = async () => {
+      setLoading(true);
+      try {
+        if (shareData) {
+          const decoded = projectService.decodeShareLink(shareData);
+          if (decoded && active) {
+            loadDesign(decoded);
+            setIsSharedView(true);
+            setActiveProjectId(null);
+            setActiveProjectName(null);
+          } else if (active) {
+            initializeHouse(initialRoom);
+          }
+        } else if (projectId) {
+          const project = await projectService.getProjectById(projectId);
+          if (project && active) {
+            loadProject(project);
+            setIsSharedView(false);
+          } else if (active) {
+            // Project not found, fall back to default
+            console.warn(`Project ${projectId} not found, redirecting...`);
+            initializeHouse(initialRoom);
+            router.replace("/designer");
+          }
+        } else if (active) {
+          if (roomsList.length === 0) {
+            initializeHouse(initialRoom);
+          }
+          setIsSharedView(false);
+        }
+      } catch (err) {
+        console.error("Error loading workspace:", err);
+        if (active) initializeHouse(initialRoom);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    initWorkspace();
+
+    return () => {
+      active = false;
+    };
+  }, [projectId, shareData, initialRoom, initializeHouse, loadDesign, loadProject, router]);
+
+  const handleSaveShared = async (name) => {
+    const designData = saveDesign();
+    const created = await projectService.createProject(name, designData);
+    setActiveProjectId(created.id);
+    setActiveProjectName(created.name);
+    setIsSharedView(false);
+    router.replace(`/designer?project=${created.id}`);
+    return created.id;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-65px)] w-full flex-col items-center justify-center bg-cream gap-4">
+        {/* Premium Spinner */}
+        <div className="relative flex h-16 w-16 items-center justify-center">
+          <div className="absolute h-16 w-16 animate-spin rounded-full border-4 border-stone-200 border-t-brand-700" />
+          <span className="text-xl font-display font-semibold text-brand-700">H</span>
+        </div>
+        <div className="text-center">
+          <h2 className="font-display text-lg font-medium text-stone-900 animate-pulse">Loading Design Studio</h2>
+          <p className="text-xs text-stone-500 mt-1">Assembling 3D interior design workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
   const activeRoomObj = roomsList.find((r) => r.id === activeRoomId) || roomsList[0];
   const baseRoom = selectedRoom || initialRoom;
@@ -42,8 +128,6 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
     name: activeRoomObj?.name || baseRoom.name,
   };
   const style = selectedStyle || initialStyle;
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-[calc(100vh-65px)] flex-col overflow-hidden lg:flex-row">
@@ -88,6 +172,8 @@ export default function DesignerClient({ room: initialRoom, style: initialStyle 
           roomName={room.name}
           styleName={style.name}
           furnitureItems={furnitureItems}
+          isSharedView={isSharedView}
+          onSaveShared={handleSaveShared}
         />
       </main>
     </div>

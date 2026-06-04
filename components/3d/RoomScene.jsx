@@ -29,6 +29,7 @@ export default function RoomScene({
     <div className="h-full w-full bg-stone-100">
       <Canvas
         shadows
+        gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [0, 2.5, 7.5], fov: 45 }}
         style={{ pointerEvents: "auto" }}
         // Deselect if clicking completely off the room diorama

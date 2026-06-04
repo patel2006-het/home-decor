@@ -8,6 +8,8 @@ import { useDesign } from "@/context/DesignContext";
 import { projectService } from "@/lib/projectService";
 import { useAuth } from "@/context/AuthContext";
 import BudgetEstimatorModal from "@/components/designer/BudgetEstimatorModal";
+import ExportCenterModal from "@/components/designer/ExportCenterModal";
+import PrintableReport from "@/components/designer/PrintableReport";
 
 // Dynamically import RoomScene with SSR disabled to prevent hydration mismatches
 // because WebGL and Three.js rely on browser-only window/WebGLContext APIs.
@@ -293,6 +295,19 @@ export default function DesignerPreview({
                 Budget
               </button>
 
+              {/* Export */}
+              <button
+                type="button"
+                onClick={() => setActiveModal("export")}
+                className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-650 hover:bg-stone-50 hover:text-stone-850 transition-colors"
+                title="Open Export Center to download PDF/images"
+              >
+                <svg className="h-3.5 w-3.5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export
+              </button>
+
               {/* Save */}
               <button
                 type="button"
@@ -561,6 +576,14 @@ export default function DesignerPreview({
       {activeModal === "budget" && (
         <BudgetEstimatorModal onClose={() => setActiveModal(null)} />
       )}
+
+      {/* ── Export Center Modal Overlay ── */}
+      {activeModal === "export" && (
+        <ExportCenterModal isOpen={true} onClose={() => setActiveModal(null)} />
+      )}
+
+      {/* ── Hidden Printable Design Report ── */}
+      <PrintableReport />
     </div>
   );
 }

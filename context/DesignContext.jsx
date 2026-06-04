@@ -453,6 +453,74 @@ export function DesignProvider({ children }) {
     setSelectedInstanceId(null);
   };
 
+  const swapFurnitureItem = (instanceId, realProduct) => {
+    if (!instanceId || !realProduct) return;
+    setRoomsList((prevRooms) =>
+      prevRooms.map((room) => {
+        if (!room.furnitureItems.some((item) => item.instanceId === instanceId)) {
+          return room;
+        }
+
+        return {
+          ...room,
+          furnitureItems: room.furnitureItems.map((item) => {
+            if (item.instanceId !== instanceId) return item;
+
+            // Find the base catalog item to get its base width/height/depth
+            let catalogItem = null;
+            for (const key in furnitureCatalog) {
+              const found = furnitureCatalog[key].find((i) => i.id === item.id);
+              if (found) {
+                catalogItem = found;
+                break;
+              }
+            }
+            if (!catalogItem) {
+              catalogItem = roomElementsCatalog.find((i) => i.id === item.id);
+            }
+            if (!catalogItem) {
+              catalogItem = lightingCatalog.find((i) => i.id === item.id);
+            }
+
+            const catWidth = catalogItem?.width ?? 100;
+            const catHeight = catalogItem?.height ?? 70;
+
+            // Get default depth based on category
+            let defaultDepth = 60;
+            const cat = catalogItem?.category || item.category;
+            if (cat === "Sleeping") defaultDepth = 180;
+            else if (cat === "Seating") defaultDepth = 80;
+            else if (cat === "Tables") defaultDepth = 90;
+            else if (cat === "Storage") defaultDepth = 50;
+            else if (cat === "Decor") defaultDepth = 10;
+            else if (cat === "Lighting") defaultDepth = 30;
+
+            const prodWidth = realProduct.dimensions?.width ?? catWidth;
+            const prodHeight = realProduct.dimensions?.height ?? catHeight;
+            const prodDepth = realProduct.dimensions?.depth ?? defaultDepth;
+
+            const scaleX = prodWidth / catWidth;
+            const scaleY = prodHeight / catHeight;
+            const scaleZ = prodDepth / defaultDepth;
+
+            console.log(`[swapFurnitureItem] Swapping ${item.name} with ${realProduct.name}. Scale:`, { scaleX, scaleY, scaleZ });
+
+            return {
+              ...item,
+              name: realProduct.name,
+              brand: realProduct.brand,
+              price: realProduct.price,
+              dimensions: realProduct.dimensions,
+              scale: { x: scaleX, y: scaleY, z: scaleZ },
+              image: realProduct.image,
+              realProductId: realProduct.id,
+            };
+          }),
+        };
+      })
+    );
+  };
+
   return (
     <DesignContext.Provider
       value={{
@@ -494,6 +562,7 @@ export function DesignProvider({ children }) {
         saveCurrentProject,
         loadProject,
         resetProjectState,
+        swapFurnitureItem,
       }}
     >
       {children}

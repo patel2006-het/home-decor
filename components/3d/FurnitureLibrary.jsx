@@ -3,6 +3,7 @@ import { useDesign } from "@/context/DesignContext";
 import { furnitureCatalog, roomElementsCatalog, lightingCatalog } from "@/lib/data";
 import MaterialsStudio from "@/components/designer/MaterialsStudio";
 import AiDesignerPanel from "@/components/designer/AiDesignerPanel";
+import MarketplaceSwapModal from "@/components/designer/MarketplaceSwapModal";
 
 /**
  * FurnitureLibrary — Premium UI sidebar panel.
@@ -26,6 +27,7 @@ export default function FurnitureLibrary({ roomSlug }) {
   const [activeSection, setActiveSection] = useState("furniture"); // "furniture" | "elements" | "materials" | "lighting"
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All");
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
 
   // Get furniture items for current room
   const catalogItems = useMemo(() => {
@@ -841,11 +843,23 @@ export default function FurnitureLibrary({ roomSlug }) {
               )}
             </div>
 
+            {/* Swap with Real Product Button */}
+            <button
+              type="button"
+              onClick={() => setIsSwapModalOpen(true)}
+              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 py-2.5 text-xs font-bold text-brand-700 hover:bg-brand-100 hover:text-brand-800 transition-colors shadow-sm"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Swap with Real Product
+            </button>
+
             {/* Delete Action Button */}
             <button
               type="button"
               onClick={() => removeFurnitureItemByInstance(selectedInstance.instanceId)}
-              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-250/30 bg-red-50/50 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 hover:text-red-700 transition-colors"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -854,6 +868,13 @@ export default function FurnitureLibrary({ roomSlug }) {
             </button>
         </div>
       )}
+
+      {/* Swap Modal */}
+      <MarketplaceSwapModal
+        isOpen={isSwapModalOpen}
+        onClose={() => setIsSwapModalOpen(false)}
+        selectedInstance={selectedInstance}
+      />
 
       {/* ── 2. SECTION SEPARATOR TABS (Furniture vs Elements vs Lighting vs Materials) ── */}
       <div className="flex rounded-xl bg-stone-100 p-1 border border-stone-200/50">
